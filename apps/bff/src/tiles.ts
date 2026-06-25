@@ -108,6 +108,9 @@ function buildSocialTile(entry: AppEntry, fetched: ConsoleManifest | null): Tile
 function buildAttributionTile(entry: AppEntry, fetched: ConsoleManifest | null): Tile {
   const { m, online } = manifestFor(entry, fetched);
   const theme = m.theme ?? FALLBACK_MANIFEST["attribution"].theme;
+  // Keep the "Open full dashboard" link-out even if the live manifest omits it
+  // (e.g. PUBLIC_WEB_URL isn't set on the API).
+  const ext = m.externalUrl ?? FALLBACK_MANIFEST["attribution"].externalUrl;
   return {
     id: entry.id,
     appId: entry.id,
@@ -117,7 +120,7 @@ function buildAttributionTile(entry: AppEntry, fetched: ConsoleManifest | null):
     icon: theme?.icon ?? "📊",
     theme,
     view: "attribution",
-    externalUrl: resolveExternalUrl(entry, m.externalUrl),
+    externalUrl: resolveExternalUrl(entry, ext),
     enabled: entry.enabled,
     online,
   };
