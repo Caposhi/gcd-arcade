@@ -48,6 +48,10 @@
   display: grid;
   place-items: center;
   font-size: 12px;
+  /* Sit above the scrolling track so the text tucks under it, not over it. */
+  position: relative;
+  z-index: 2;
+  box-shadow: 6px 0 12px rgba(6, 10, 22, 0.9);
 }
 .ticker-track {
   display: flex;

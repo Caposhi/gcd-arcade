@@ -51,20 +51,27 @@ export function App() {
     <div className={`app-root ${settings.tvMode ? "tv" : ""}`}>
       <div className="xmb-wave" />
 
-      <div className="topbar">
-        <div className="brand">
-          GCD<b>·</b>ARCADE
+      {/* Launcher chrome — only on the home screen. When a view is open it
+          provides its own header (clock + settings + back), so the global bar
+          must step aside or it overlaps and steals clicks. */}
+      {!open && (
+        <div className="topbar">
+          <div className="brand">
+            GCD<b>·</b>ARCADE
+          </div>
+          <div className="topbar-right">
+            <Clock />
+            <button className="iconbtn" title="Settings" onClick={() => setShowSettings(true)}>
+              ⚙️
+            </button>
+          </div>
         </div>
-        <div className="topbar-right">
-          <Clock />
-          <button className="iconbtn" title="Settings" onClick={() => setShowSettings(true)}>
-            ⚙️
-          </button>
-        </div>
-      </div>
+      )}
 
       {mode === "home" && !open && <Xmb onOpen={setOpen} />}
-      {mode === "home" && open && <ViewHost tile={open} onBack={() => setOpen(null)} />}
+      {mode === "home" && open && (
+        <ViewHost tile={open} onBack={() => setOpen(null)} onOpenSettings={() => setShowSettings(true)} />
+      )}
 
       {mode === "boot" && <Boot onDone={bootDone} />}
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
