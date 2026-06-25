@@ -7,7 +7,7 @@ import { Crt } from "./shell/Crt";
 import { SettingsPanel } from "./shell/Settings";
 import { ViewHost } from "./views/ViewHost";
 import { useSettings } from "./lib/settings";
-import { setMusic } from "./lib/sound";
+import { setMusicTrack } from "./lib/sound";
 
 type Mode = "boot" | "home";
 
@@ -18,9 +18,12 @@ export function App() {
   const [open, setOpen] = useState<Tile | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
+  // Single source of truth for the music track: the Agents view gets the
+  // upbeat tycoon loop, everything else the ambient XMB pad. Gated by Music.
   useEffect(() => {
-    setMusic(settings.music);
-  }, [settings.music]);
+    const track = open?.view === "agents" ? "agency" : "ambient";
+    setMusicTrack(track, settings.music);
+  }, [open, mode, settings.music]);
 
   const bootDone = () => {
     sessionStorage.setItem("booted", "1");

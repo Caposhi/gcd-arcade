@@ -44,11 +44,27 @@ gcd-arcade/
   - **Live tile badges** derived from `/console/state` (e.g. "awaiting approval",
     "ROAS 3.4×", "3 pending"); disabled apps show **INSERT COIN**.
   - Generic themed **live view** (snapshot + live event stream) wired to the SSE
-    pass-through — works for every tile today; bespoke per-app "worlds" layer on
-    top later. **Automation** drill-down sub-grid and **placeholder** cabinet.
+    pass-through — the default for tiles whose bespoke world isn't built yet.
+    **Automation** drill-down sub-grid and **placeholder** cabinet.
   - Global layers: **CRT** scanlines, **sound** (WebAudio-synth nav blips +
     ambient music toggle, off by default), **TV mode**, settings panel — all
     persisted to `localStorage`.
+
+### Bespoke worlds
+
+- **Agents Live View → "GCD SOCIAL · Creative Garage"** (`views/agents/`): the
+  GCD-SOCIAL feed rendered as a **Game Dev Tycoon-style marketing agency**. The
+  7 agents are named employees at desks (Dana/Analytics, Remy/Copy, Pixel/Art,
+  Tess/SEO, Cole/Critic, Fran/Formatter, Posty/Publisher); a **project folder
+  tours the desks** as `agent:start/done` fire, showing the real caption + image
+  when the feed carries them. Full-juice moments — `brief:published` → confetti
+  + cha-ching, `critic:verdict FAIL` → send-back rework, `brief:escalated` →
+  alert. A tycoon HUD (Level/XP, Reputation, Buzz, Posts, streak, autonomy MODE,
+  IG/FB token-health chips) is backed by a **localStorage save-file** advanced by
+  real cumulative counts (the hub itself stays stateless). An upbeat synth loop
+  plays only when the Music toggle is on. The `engine.ts` reducer probes the
+  feed's payload shapes defensively, so it animates on the event *kinds* even
+  before the exact field names are confirmed against the live deploy.
 
 ## Develop
 

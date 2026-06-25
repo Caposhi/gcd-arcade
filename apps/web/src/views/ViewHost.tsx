@@ -3,6 +3,7 @@ import type { Tile } from "@gcd-arcade/shared";
 import { LiveView } from "./LiveView";
 import { Automation } from "./Automation";
 import { Placeholder } from "./Placeholder";
+import { AgentsView } from "./agents/AgentsView";
 import { sfx } from "../lib/sound";
 import { useSettings } from "../lib/settings";
 
@@ -54,12 +55,14 @@ export function ViewHost({ tile, onBack }: { tile: Tile; onBack: () => void }) {
 
 function Body({ tile }: { tile: Tile }) {
   switch (tile.view) {
+    case "agents":
+      return <AgentsView tile={tile} />;
     case "automation":
       return <Automation tile={tile} />;
     case "placeholder":
       return <Placeholder tile={tile} />;
-    // agents / attribution / transcripts / sms-inbox / live all use the
-    // generic themed live view for the foundation milestone.
+    // attribution / transcripts / sms-inbox / live still use the generic
+    // themed live view until their bespoke worlds are built.
     default:
       return <LiveView tile={tile} />;
   }
