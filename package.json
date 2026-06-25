@@ -1,0 +1,25 @@
+{
+  "name": "gcd-arcade",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GCD-ARCADE — a PS3/PSP XMB-style retro launcher + live-view aggregator for German Car Depot's internal software.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build:shared": "npm run build -w @gcd-arcade/shared",
+    "build:bff": "npm run build -w @gcd-arcade/bff",
+    "build:web": "npm run build -w @gcd-arcade/web",
+    "build": "npm run build:shared && npm run build:bff && npm run build:web",
+    "dev:bff": "npm run dev -w @gcd-arcade/bff",
+    "dev:web": "npm run dev -w @gcd-arcade/web",
+    "dev": "npm run build:shared && concurrently -n bff,web -c blue,magenta \"npm run dev:bff\" \"npm run dev:web\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
