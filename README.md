@@ -66,6 +66,23 @@ gcd-arcade/
   feed's payload shapes defensively, so it animates on the event *kinds* even
   before the exact field names are confirmed against the live deploy.
 
+- **Attribution → "Neon Trading Terminal"** (`views/attribution/`): the
+  Attribution feed rendered as a Bloomberg/synthwave trading desk. A scrolling
+  **ticker tape** (spend/revenue/ROAS/CAC/match/CAPI with up-down coloring), a
+  glowing **ROAS hero** + sparkline + desk rank, the **5 BullMQ jobs as neon
+  execution lanes** (labels derived from whatever jobs the feed reports; pulse
+  on `job:active`, fill on `progress`, green on `completed`, red-alert on
+  `failed`), a **tape** where attribution matches and CAPI sends print live with
+  real $ amounts / RO numbers / campaign names, and a funnel + match-rate /
+  CAPI-acceptance gauges. Full-juice moments (match print + ka-ching, ORDERS
+  AWAY, NEW ROAS HIGH, JOB FAILED klaxon) and a light game flourish (best-ROAS
+  high-score + desk rank) persisted client-side.
+
+The shared SSE client (`lib/sse.ts`) parses the stream with `fetch` and takes
+each event's `kind` from its JSON payload, so views receive **any** event kind
+without a hard-coded event-name list, and reconnect/resume is handled with
+backoff + `?since=`.
+
 ## Develop
 
 ```bash

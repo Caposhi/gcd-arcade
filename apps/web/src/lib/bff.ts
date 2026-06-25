@@ -19,9 +19,11 @@ export async function fetchState(appId: string): Promise<ConsoleState> {
   return (await res.json()) as ConsoleState;
 }
 
-/** Build the SSE URL for a tile's stream (optionally filtered by program). */
-export function streamUrl(appId: string, program?: string): string {
+/** Build the SSE URL for a tile's stream (optionally filtered by program,
+ *  optionally resuming after a cursor id). */
+export function streamUrl(appId: string, program?: string, since?: number): string {
   const u = new URL(url(`/api/apps/${encodeURIComponent(appId)}/stream`), window.location.origin);
   if (program) u.searchParams.set("program", program);
+  if (since) u.searchParams.set("since", String(since));
   return u.toString();
 }

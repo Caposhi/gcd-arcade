@@ -4,6 +4,7 @@ import { LiveView } from "./LiveView";
 import { Automation } from "./Automation";
 import { Placeholder } from "./Placeholder";
 import { AgentsView } from "./agents/AgentsView";
+import { AttributionView } from "./attribution/AttributionView";
 import { sfx } from "../lib/sound";
 import { useSettings } from "../lib/settings";
 
@@ -57,12 +58,14 @@ function Body({ tile }: { tile: Tile }) {
   switch (tile.view) {
     case "agents":
       return <AgentsView tile={tile} />;
+    case "attribution":
+      return <AttributionView tile={tile} />;
     case "automation":
       return <Automation tile={tile} />;
     case "placeholder":
       return <Placeholder tile={tile} />;
-    // attribution / transcripts / sms-inbox / live still use the generic
-    // themed live view until their bespoke worlds are built.
+    // transcripts / sms-inbox / live still use the generic themed live view
+    // until their bespoke worlds are built.
     default:
       return <LiveView tile={tile} />;
   }
