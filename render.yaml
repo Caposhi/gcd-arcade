@@ -1,0 +1,56 @@
+# GCD-ARCADE on Render: a static site (the XMB front-end) + one Node web
+# service (the BFF aggregator). Same Render account as the other GCD apps.
+services:
+  # ---- BFF: the only thing that holds app console tokens ----
+  - type: web
+    name: gcd-arcade-bff
+    runtime: node
+    plan: starter
+    rootDir: .
+    buildCommand: npm install && npm run build:shared && npm run build:bff
+    startCommand: npm run start -w @gcd-arcade/bff
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: GCD_SOCIAL_URL
+        value: https://gcd-social-api.onrender.com
+      - key: GCD_WEBHOOK_URL
+        value: https://gcd-webhook.onrender.com
+      # Attribution's Fastify API host that serves /console/* (NOT the Next.js
+      # web host). Set to the real API service URL.
+      - key: ATTRIBUTION_URL
+        sync: false
+      # Optional per-app console tokens (server-side only; never sent to browser).
+      - key: GCD_SOCIAL_CONSOLE_TOKEN
+        sync: false
+      - key: ATTRIBUTION_CONSOLE_TOKEN
+        sync: false
+      - key: GCD_WEBHOOK_CONSOLE_TOKEN
+        sync: false
+      # Only needed if link-outs to gcd-webhook's /admin/sms and
+      # /api/admin/transcripts UIs require ?secret=.
+      - key: GCD_WEBHOOK_ADMIN_SECRET
+        sync: false
+
+  # ---- Web: the Vite static site ----
+  - type: web
+    name: gcd-arcade-web
+    runtime: static
+    rootDir: .
+    buildCommand: npm install && npm run build:shared && npm run build:web
+    staticPublishPath: apps/web/dist
+    # Route API calls to the BFF and let the SPA handle all other paths.
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://gcd-arcade-bff.onrender.com/api/*
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Same-origin via the /api rewrite above, so the client uses relative URLs.
+      - key: VITE_BFF_URL
+        value: ""
