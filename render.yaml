@@ -40,17 +40,18 @@ services:
     rootDir: .
     buildCommand: npm install && npm run build:shared && npm run build:web
     staticPublishPath: apps/web/dist
-    # Route API calls to the BFF and let the SPA handle all other paths.
+    # SPA fallback — let the client router handle all paths.
     routes:
-      - type: rewrite
-        source: /api/*
-        destination: https://gcd-arcade-bff.onrender.com/api/*
       - type: rewrite
         source: /*
         destination: /index.html
     envVars:
       - key: NODE_VERSION
         value: "22"
-      # Same-origin via the /api rewrite above, so the client uses relative URLs.
+      # The browser talks to the BFF directly (the BFF is CORS-open). A direct
+      # URL keeps SSE streams UNBUFFERED — Render static-site rewrites can buffer
+      # streaming responses, which would stall the live /console feeds.
+      # NOTE: confirm this matches the BFF service's real URL after first deploy
+      # (Render may add a suffix if the name is taken).
       - key: VITE_BFF_URL
-        value: ""
+        value: https://gcd-arcade-bff.onrender.com
