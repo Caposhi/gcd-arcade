@@ -11,10 +11,27 @@ import { setMusicTrack } from "./lib/sound";
 
 type Mode = "boot" | "home";
 
+// Storage access can throw (privacy extensions / strict browser settings block
+// it on some origins). Never let that crash the whole app — degrade gracefully.
+function safeSessionGet(key: string): string | null {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function safeSessionSet(key: string, value: string): void {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function App() {
   const settings = useSettings();
   // Boot shows once per session (survives in-app navigation, not reloads).
-  const [mode, setMode] = useState<Mode>(() => (sessionStorage.getItem("booted") ? "home" : "boot"));
+  const [mode, setMode] = useState<Mode>(() => (safeSessionGet("booted") ? "home" : "boot"));
   const [open, setOpen] = useState<Tile | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -26,7 +43,7 @@ export function App() {
   }, [open, mode, settings.music]);
 
   const bootDone = () => {
-    sessionStorage.setItem("booted", "1");
+    safeSessionSet("booted", "1");
     setMode("home");
   };
 
