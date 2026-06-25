@@ -5,11 +5,12 @@ import { Automation } from "./Automation";
 import { Placeholder } from "./Placeholder";
 import { AgentsView } from "./agents/AgentsView";
 import { AttributionView } from "./attribution/AttributionView";
+import { Clock } from "../shell/Clock";
 import { sfx } from "../lib/sound";
 import { useSettings } from "../lib/settings";
 
 /** Frames a tile's themed view: header (with back + link-out) and body. */
-export function ViewHost({ tile, onBack }: { tile: Tile; onBack: () => void }) {
+export function ViewHost({ tile, onBack, onOpenSettings }: { tile: Tile; onBack: () => void; onOpenSettings: () => void }) {
   const { sound } = useSettings();
 
   useEffect(() => {
@@ -34,11 +35,17 @@ export function ViewHost({ tile, onBack }: { tile: Tile; onBack: () => void }) {
           {tile.tagline && <div className="tag">{tile.tagline}</div>}
         </div>
         <div className="spacer" />
+        <span className="view-clock">
+          <Clock />
+        </span>
         {tile.externalUrl && (
           <a className="btn" href={tile.externalUrl} target="_blank" rel="noreferrer">
             Open full dashboard ↗
           </a>
         )}
+        <button className="iconbtn" title="Settings" onClick={onOpenSettings}>
+          ⚙️
+        </button>
         <button
           className="btn ghost"
           onClick={() => {

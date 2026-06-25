@@ -265,6 +265,12 @@ body {
 .view-header .spacer {
   flex: 1;
 }
+.view-clock {
+  color: var(--ink-dim);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 .statusdot {
   display: inline-flex;
   align-items: center;
