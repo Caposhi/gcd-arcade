@@ -84,70 +84,192 @@ export type MusicTrack = "ambient" | "agency";
 let currentTrack: MusicTrack | null = null;
 let stopCurrent: (() => void) | null = null;
 
-function startAmbient(): () => void {
-  const a = ac();
-  if (!a) return () => {};
-  const gain = a.createGain();
-  gain.gain.value = 0.0001;
-  gain.gain.linearRampToValueAtTime(0.02, a.currentTime + 2);
-  const oscs = [110, 164.81].map((f) => {
-    const o = a.createOscillator();
-    o.type = "sine";
-    o.frequency.value = f;
-    o.connect(gain);
-    o.start();
-    return o;
-  });
-  gain.connect(a.destination);
-  return () => {
-    gain.gain.linearRampToValueAtTime(0.0001, a.currentTime + 0.8);
-    setTimeout(() => oscs.forEach((o) => o.stop()), 900);
-  };
+// --- generative acid-house / EDM engine --------------------------------
+// One original, royalty-free engine drives the music. It self-arranges with a
+// slow intensity wave so it breathes between PEACEFUL (pads, sparse bass) and
+// ENERGETIC (four-on-the-floor kick, full 303-style acid line, hats, builds),
+// looping forever without sounding like a fixed loop. `floor` raises the
+// minimum energy (the Agents view runs hotter than the home screen).
+
+let noiseBuf: AudioBuffer | null = null;
+function noiseBuffer(a: AudioContext): AudioBuffer {
+  if (noiseBuf) return noiseBuf;
+  const len = Math.floor(a.sampleRate * 0.4);
+  const buf = a.createBuffer(1, len, a.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  noiseBuf = buf;
+  return buf;
 }
 
-function startAgency(): () => void {
+function startEngine(floor: number): () => void {
   const a = ac();
   if (!a) return () => {};
+
+  // master chain: bus → gentle lowpass → soft compressor → out
   const master = a.createGain();
   master.gain.value = 0.0001;
-  master.gain.linearRampToValueAtTime(0.05, a.currentTime + 1.5);
-  master.connect(a.destination);
+  master.gain.linearRampToValueAtTime(0.22, a.currentTime + 2.5);
+  const tone = a.createBiquadFilter();
+  tone.type = "lowpass";
+  tone.frequency.value = 9000;
+  const comp = a.createDynamicsCompressor();
+  comp.threshold.value = -14;
+  comp.ratio.value = 4;
+  master.connect(tone).connect(comp).connect(a.destination);
 
-  // A bright, loopable 8-step arpeggio over a I–V–vi–IV-ish feel.
-  const seq = [392.0, 523.25, 659.25, 783.99, 659.25, 523.25, 587.33, 493.88];
-  const bass = [98.0, 98.0, 110.0, 87.31];
-  let step = 0;
-  const stepMs = 260;
+  const tempo = 124;
+  const stepDur = 60 / tempo / 4; // 16th note
+  const ROOTS = [55.0, 43.65, 65.41, 49.0]; // Am – F – C – G (per bar)
+  const ACID = [0, 0, 12, 0, 0, 3, 0, 7, 0, 0, 10, 0, 12, 0, 7, 3]; // semitones
+  const ACCENT = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0];
 
-  const note = (freq: number, dur: number, type: OscillatorType, peak: number) => {
+  const kick = (t: number, vel: number) => {
     const o = a.createOscillator();
     const g = a.createGain();
-    o.type = type;
-    o.frequency.value = freq;
-    const now = a.currentTime;
-    g.gain.setValueAtTime(0.0001, now);
-    g.gain.exponentialRampToValueAtTime(peak, now + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    o.type = "sine";
+    o.frequency.setValueAtTime(150, t);
+    o.frequency.exponentialRampToValueAtTime(48, t + 0.11);
+    g.gain.setValueAtTime(vel, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
     o.connect(g).connect(master);
-    o.start(now);
-    o.stop(now + dur + 0.02);
+    o.start(t);
+    o.stop(t + 0.22);
+  };
+  const hat = (t: number, vel: number) => {
+    const s = a.createBufferSource();
+    s.buffer = noiseBuffer(a);
+    const hp = a.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 7000;
+    const g = a.createGain();
+    g.gain.setValueAtTime(vel, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
+    s.connect(hp).connect(g).connect(master);
+    s.start(t);
+    s.stop(t + 0.06);
+  };
+  const sub = (t: number, f: number, dur: number, vel: number) => {
+    const o = a.createOscillator();
+    const g = a.createGain();
+    o.type = "sine";
+    o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vel, t + 0.02);
+    g.gain.setValueAtTime(vel, t + dur * 0.6);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(master);
+    o.start(t);
+    o.stop(t + dur + 0.02);
+  };
+  // TB-303-style squelch: saw → resonant lowpass with a fast filter envelope.
+  const acid = (t: number, f: number, dur: number, accent: boolean, inten: number) => {
+    const o = a.createOscillator();
+    o.type = "sawtooth";
+    o.frequency.value = f;
+    const flt = a.createBiquadFilter();
+    flt.type = "lowpass";
+    flt.Q.value = 10 + 6 * inten;
+    const peak = 600 + (accent ? 2400 : 1400) * inten;
+    flt.frequency.setValueAtTime(220, t);
+    flt.frequency.exponentialRampToValueAtTime(peak, t + 0.02);
+    flt.frequency.exponentialRampToValueAtTime(260, t + dur * 0.9);
+    const g = a.createGain();
+    const vel = (accent ? 0.5 : 0.32) * (0.5 + 0.5 * inten);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vel, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.95);
+    o.connect(flt).connect(g).connect(master);
+    o.start(t);
+    o.stop(t + dur);
+  };
+  const pad = (t: number, freqs: number[], dur: number, vel: number) => {
+    freqs.forEach((f, i) => {
+      const o = a.createOscillator();
+      o.type = "sawtooth";
+      o.frequency.value = f;
+      o.detune.value = (i - 1) * 6;
+      const flt = a.createBiquadFilter();
+      flt.type = "lowpass";
+      flt.frequency.value = 1200;
+      const g = a.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(vel, t + 0.8);
+      g.gain.linearRampToValueAtTime(0.0001, t + dur);
+      o.connect(flt).connect(g).connect(master);
+      o.start(t);
+      o.stop(t + dur + 0.05);
+    });
   };
 
-  const tick = () => {
-    note(seq[step % seq.length], 0.22, "square", 0.5);
-    if (step % 2 === 0) note(bass[(step / 2) % bass.length], 0.45, "triangle", 0.6);
-    step++;
+  // Slow triangle over 16 bars → gradual build-ups and breakdowns.
+  const intensityAt = (bar: number) => {
+    const p = ((bar % 16) / 8) % 2;
+    const tri = p <= 1 ? p : 2 - p;
+    return Math.min(1, floor + (1 - floor) * tri);
   };
-  tick();
-  const iv = setInterval(tick, stepMs);
+
+  let step = 0;
+  let next = a.currentTime + 0.15;
+
+  const scheduleStep = (t: number, gstep: number) => {
+    const bar = Math.floor(gstep / 16);
+    const s = gstep % 16;
+    const inten = intensityAt(bar);
+    const root = ROOTS[bar % 4];
+
+    if (inten >= 0.5) {
+      if (s % 4 === 0) kick(t, 0.9);
+    } else if (s === 0) {
+      kick(t, 0.4 + 0.4 * inten);
+    }
+    if (inten >= 0.55 && s % 2 === 1) hat(t, 0.18 + 0.14 * inten);
+    else if (s === 8) hat(t, 0.08);
+    if (s % 8 === 0) sub(t, root, stepDur * 7, 0.5 * (0.4 + 0.6 * inten));
+
+    const playAcid = inten >= 0.6 || s % 2 === 0;
+    if (playAcid) acid(t, root * 2 * Math.pow(2, ACID[s] / 12), stepDur * 0.9, ACCENT[s] === 1, inten);
+
+    if (s === 0 && inten < 0.7) {
+      const third = root * Math.pow(2, 3 / 12);
+      const fifth = root * Math.pow(2, 7 / 12);
+      pad(t, [root * 2, third * 2, fifth * 2], stepDur * 16, 0.05 * (1 - inten) + 0.02);
+    }
+    if (inten > 0.8 && (s === 6 || s === 14)) {
+      acid(t, root * 4 * Math.pow(2, ACID[s] / 12), stepDur * 1.5, true, inten);
+    }
+  };
+
+  const timer = setInterval(() => {
+    const a2 = ac();
+    if (!a2) return;
+    while (next < a2.currentTime + 0.12) {
+      scheduleStep(next, step);
+      next += stepDur;
+      step++;
+    }
+  }, 25);
+
   return () => {
-    clearInterval(iv);
-    master.gain.linearRampToValueAtTime(0.0001, a.currentTime + 0.6);
-    setTimeout(() => master.disconnect(), 700);
+    clearInterval(timer);
+    const now = a.currentTime;
+    master.gain.cancelScheduledValues(now);
+    master.gain.setValueAtTime(Math.max(0.0001, master.gain.value), now);
+    master.gain.linearRampToValueAtTime(0.0001, now + 1.2);
+    setTimeout(() => {
+      try {
+        master.disconnect();
+        tone.disconnect();
+        comp.disconnect();
+      } catch {
+        /* ignore */
+      }
+    }, 1300);
   };
 }
 
-/** Switch tracks. `enabled=false` stops all music. Safe to call repeatedly. */
+/** Switch tracks. `enabled=false` stops all music. Safe to call repeatedly.
+ *  Both tracks use the generative engine; the Agents view runs hotter. */
 export function setMusicTrack(track: MusicTrack, enabled: boolean): void {
   const desired = enabled ? track : null;
   if (desired === currentTrack) return;
@@ -156,6 +278,6 @@ export function setMusicTrack(track: MusicTrack, enabled: boolean): void {
     stopCurrent = null;
   }
   currentTrack = desired;
-  if (desired === "ambient") stopCurrent = startAmbient();
-  else if (desired === "agency") stopCurrent = startAgency();
+  if (desired === "ambient") stopCurrent = startEngine(0.12);
+  else if (desired === "agency") stopCurrent = startEngine(0.5);
 }
