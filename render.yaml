@@ -18,9 +18,9 @@ services:
       - key: GCD_WEBHOOK_URL
         value: https://gcd-webhook.onrender.com
       # Attribution's Fastify API host that serves /console/* (NOT the Next.js
-      # web host). Set to the real API service URL.
+      # web host, which is gcd-attribution-web).
       - key: ATTRIBUTION_URL
-        sync: false
+        value: https://gcd-attribution-api.onrender.com
       # Optional per-app console tokens (server-side only; never sent to browser).
       - key: GCD_SOCIAL_CONSOLE_TOKEN
         sync: false

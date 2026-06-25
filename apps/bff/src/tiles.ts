@@ -30,6 +30,10 @@ const FALLBACK_MANIFEST: Record<string, ConsoleManifest> = {
     name: "Attribution Dashboard",
     tagline: "Meta Ads ↔ Tekmetric offline revenue attribution",
     theme: { palette: ["#0b1f3a", "#1877F2", "#42b72a"], style: "neon trading terminal", icon: "📊" },
+    // The existing Next.js dashboard, for "Open full dashboard". The live
+    // manifest will supply this once /console/* ships; until then the fallback
+    // keeps the link-out working even while the API reads OFFLINE.
+    externalUrl: "https://gcd-attribution-web.onrender.com/dashboard/admin",
   },
   "gcd-webhook": {
     id: "gcd-webhook",
