@@ -53,6 +53,10 @@ export function AgentsView({ tile }: { tile: Tile }) {
         .then((s) => {
           if (!alive) return;
           engineRef.current!.ingestState(s);
+          // Seed from the authoritative recent-event history so the office
+          // reflects the latest brief even if the live stream came up late or
+          // replayed only partially. Old events update visuals, not fanfare.
+          if (Array.isArray(s.recentEvents)) engineRef.current!.ingestEvents(s.recentEvents);
           setOffice(engineRef.current!.getState());
         })
         .catch(() => {});
