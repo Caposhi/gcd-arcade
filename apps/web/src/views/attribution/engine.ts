@@ -189,10 +189,15 @@ export class AttributionEngine {
   }
 
   ingestEvents(events: ConsoleEvent[]): void {
-    // Process oldest→newest; recentEvents may arrive in either order.
-    for (const ev of [...events].sort((a, b) => (a.id ?? 0) - (b.id ?? 0))) {
-      if (ev.id <= this.lastId) continue;
-      this.lastId = ev.id;
+    // Process oldest→newest. IDs may be strings; coerce to numbers so de-dup
+    // uses numeric order, not lexicographic ("10" < "9").
+    const ordered = [...events].sort((a, b) => Number(a.id ?? 0) - Number(b.id ?? 0));
+    for (const ev of ordered) {
+      const eid = Number(ev.id);
+      if (Number.isFinite(eid)) {
+        if (eid <= this.lastId) continue;
+        this.lastId = eid;
+      }
       this.handle(ev);
     }
   }
