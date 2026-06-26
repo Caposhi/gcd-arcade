@@ -82,6 +82,14 @@ function pct(v: number | undefined): number | undefined {
   return v > 0 && v <= 1 ? Math.round(v * 100) : Math.round(v);
 }
 
+/** Live event (drives moments + persistent stats) vs. replayed/seeded history
+ *  (updates visuals only). No timestamp → treated as live. */
+function isFresh(ev: ConsoleEvent): boolean {
+  if (!ev.createdAt) return true;
+  const t = Date.parse(ev.createdAt);
+  return Number.isNaN(t) ? true : Date.now() - t < 25000;
+}
+
 // ----------------------------- lane mapping --------------------------------
 const DEFAULT_LANES: Lane[] = [
   { key: "ingest", label: "Ingest Meta Stats", status: "idle", progress: 0 },
@@ -116,12 +124,14 @@ export class AttributionEngine {
   private lastId = 0;
   private printSeq = 0;
   private momentSeq = 0;
+  private currentFresh = true;
 
   constructor(private onMoment: (m: Moment) => void) {
     this.save = loadDeskSave();
   }
 
   ingestState(state: ConsoleState): void {
+    this.currentFresh = true; // a state snapshot is always current
     const s = rec(state);
     const k = asRecord(s.kpis) ?? s;
     const next: Kpis = {
@@ -188,6 +198,7 @@ export class AttributionEngine {
 
   private handle(ev: ConsoleEvent): void {
     const kind = (ev.kind || "").toLowerCase();
+    this.currentFresh = isFresh(ev);
     const d = asRecord(ev.data);
     const name = strIn(d, ["name", "queue", "job", "id"]) ?? "";
 
@@ -206,13 +217,17 @@ export class AttributionEngine {
           lane.status = "completed";
           lane.progress = 100;
           lane.lastRunAt = ev.createdAt ?? lane.lastRunAt;
-          this.save.cleanStreak += 1;
-          this.save.bestStreak = Math.max(this.save.bestStreak, this.save.cleanStreak);
-          persistDeskSave(this.save);
+          if (this.currentFresh) {
+            this.save.cleanStreak += 1;
+            this.save.bestStreak = Math.max(this.save.bestStreak, this.save.cleanStreak);
+            persistDeskSave(this.save);
+          }
         } else if (kind === "job:failed") {
           lane.status = "failed";
-          this.save.cleanStreak = 0;
-          persistDeskSave(this.save);
+          if (this.currentFresh) {
+            this.save.cleanStreak = 0;
+            persistDeskSave(this.save);
+          }
           this.print({ kind: "failed", text: `${lane.label} FAILED`, at: ev.createdAt ?? "" });
           this.emit("failed");
         }
@@ -252,6 +267,7 @@ export class AttributionEngine {
     this.prints = [{ ...p, id: ++this.printSeq }, ...this.prints].slice(0, 40);
   }
   private emit(kind: MomentKind, amount?: number): void {
+    if (!this.currentFresh) return; // no fanfare for replayed/seeded history
     this.onMoment({ kind, seq: ++this.momentSeq, amount });
   }
 

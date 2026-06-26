@@ -57,6 +57,10 @@ export function AttributionView({ tile }: { tile: Tile }) {
         .then((st) => {
           if (!alive) return;
           engineRef.current!.ingestState(st);
+          // Seed from recent-event history so the desk reflects the latest
+          // activity even if the stream came up late. Old events update visuals
+          // only (no stale fanfare / streak inflation).
+          if (Array.isArray(st.recentEvents)) engineRef.current!.ingestEvents(st.recentEvents);
           setTerm(engineRef.current!.getState());
         })
         .catch(() => {});

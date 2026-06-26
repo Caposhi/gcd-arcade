@@ -171,6 +171,15 @@ function normalizeTokenHealth(state: ConsoleState): OfficeState["tokenHealth"] {
   return "unknown";
 }
 
+/** A live event (drives moments + persistent stats) vs. a replayed/seeded one
+ *  from history (updates visual state only). Events without a timestamp are
+ *  treated as live. */
+function isFresh(ev: ConsoleEvent): boolean {
+  if (!ev.createdAt) return true;
+  const t = Date.parse(ev.createdAt);
+  return Number.isNaN(t) ? true : Date.now() - t < 25000;
+}
+
 function publishedFromState(state: ConsoleState): number | undefined {
   return (
     firstNumber(state as Record<string, unknown>, ["published", "postsPublished", "totalPublished"]) ??
@@ -200,6 +209,7 @@ export class AgencyEngine {
   private tokenHealth: OfficeState["tokenHealth"] = "unknown";
   private lastId = 0;
   private momentSeq = 0;
+  private currentFresh = true;
 
   constructor(private onMoment: (m: Moment) => void) {
     this.save = loadSave();
@@ -247,6 +257,7 @@ export class AgencyEngine {
 
   private handle(ev: ConsoleEvent): void {
     const kind = ev.kind || "";
+    this.currentFresh = isFresh(ev);
     this.absorbContent(ev);
 
     if (kind === "brief:start") {
@@ -289,20 +300,17 @@ export class AgencyEngine {
       const verdict = firstString(asRecord(ev.data), ["verdict", "result", "status"]) ?? ev.message ?? "";
       const pass = /pass|ok|approve|true/i.test(verdict);
       this.agents["brand-compliance-critic"] = "done";
-      this.save.verdictCount += 1;
-      if (pass) {
-        this.save.passCount += 1;
-        if (this.brief) this.brief.verdict = "PASS";
-        this.emit("stamp");
-      } else {
-        if (this.brief) {
-          this.brief.verdict = "FAIL";
-          // send-back: token returns to the copywriter to rework
-          this.brief.phaseIndex = Math.min(this.brief.phaseIndex, PIPELINE.indexOf("copywriter"));
-        }
-        this.emit("fail");
+      if (this.brief) {
+        this.brief.verdict = pass ? "PASS" : "FAIL";
+        // FAIL → send-back: token returns to the copywriter to rework
+        if (!pass) this.brief.phaseIndex = Math.min(this.brief.phaseIndex, PIPELINE.indexOf("copywriter"));
       }
-      persistSave(this.save);
+      if (this.currentFresh) {
+        this.save.verdictCount += 1;
+        if (pass) this.save.passCount += 1;
+        persistSave(this.save);
+      }
+      this.emit(pass ? "stamp" : "fail");
       return;
     }
     if (kind === "brief:awaiting_approval") {
@@ -314,35 +322,45 @@ export class AgencyEngine {
         this.brief.status = "published";
         this.agents["posting"] = "done";
       }
-      const before = levelFromXp(this.save.xp).level;
-      this.save.lifetimePublished += 1;
-      this.save.xp += XP_PER_POST;
-      this.save.streak += 1;
-      this.save.bestStreak = Math.max(this.save.bestStreak, this.save.streak);
-      this.save.lastPublishedAt = ev.createdAt ?? null;
-      persistSave(this.save);
-      this.publishedPosts.unshift({
-        id: this.brief?.id ?? `post-${this.lastId}`,
-        caption: this.brief?.caption,
-        imageUrl: this.brief?.imageUrl,
-        at: ev.createdAt ?? "",
-      });
-      this.publishedPosts = this.publishedPosts.slice(0, 6);
-      this.emit("published");
-      const after = levelFromXp(this.save.xp).level;
-      if (after > before) this.emit("levelup", after);
+      // Always reflect the shipped post visually (de-duped by id below).
+      const postId = this.brief?.id ?? `post-${this.lastId}`;
+      if (!this.publishedPosts.some((p) => p.id === postId)) {
+        this.publishedPosts.unshift({
+          id: postId,
+          caption: this.brief?.caption,
+          imageUrl: this.brief?.imageUrl,
+          at: ev.createdAt ?? "",
+        });
+        this.publishedPosts = this.publishedPosts.slice(0, 6);
+      }
+      // Only count + celebrate genuinely live publishes (not history replays).
+      if (this.currentFresh) {
+        const before = levelFromXp(this.save.xp).level;
+        this.save.lifetimePublished += 1;
+        this.save.xp += XP_PER_POST;
+        this.save.streak += 1;
+        this.save.bestStreak = Math.max(this.save.bestStreak, this.save.streak);
+        this.save.lastPublishedAt = ev.createdAt ?? null;
+        persistSave(this.save);
+        this.emit("published");
+        const after = levelFromXp(this.save.xp).level;
+        if (after > before) this.emit("levelup", after);
+      }
       return;
     }
     if (kind === "brief:escalated") {
       if (this.brief) this.brief.status = "escalated";
-      this.save.streak = 0;
-      persistSave(this.save);
+      if (this.currentFresh) {
+        this.save.streak = 0;
+        persistSave(this.save);
+      }
       this.emit("escalated");
       return;
     }
   }
 
   private emit(kind: MomentKind, level?: number): void {
+    if (!this.currentFresh) return; // no fanfare for replayed/seeded history
     this.onMoment({ kind, seq: ++this.momentSeq, level });
   }
 
