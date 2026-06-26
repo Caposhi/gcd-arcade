@@ -92,14 +92,16 @@ export function useStream(appId: string | null, program?: string, max = 120): Us
         throw new Error("stream ended");
       } catch (err) {
         if (closed || (err as Error)?.name === "AbortError") return;
-        setStatus("error");
         attempt += 1;
+        // A connected-but-quiet stream that the server periodically recycles is
+        // NORMAL — reconnect silently (status "connecting", which the views show
+        // as "waiting"). Only surface "offline" after several consecutive
+        // failures with no successful open in between (attempt resets to 0 on
+        // a successful connect).
+        setStatus(attempt >= 4 ? "error" : "connecting");
         const delay = Math.min(15000, 1000 * 2 ** Math.min(attempt, 4));
         setTimeout(() => {
-          if (!closed) {
-            setStatus("connecting");
-            void connect();
-          }
+          if (!closed) void connect();
         }, delay);
       }
     };
