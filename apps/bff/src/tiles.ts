@@ -61,6 +61,20 @@ const WEBHOOK_TOP_LEVEL: Record<string, ViewKind> = {
   "sms-inbox": "sms-inbox",
 };
 
+/** Short taglines for the gcd-webhook programs (the manifest carries none). */
+const PROGRAM_TAGLINES: Record<string, string> = {
+  transcripts: "GoToConnect call-transcript search · nightly sync",
+  "sms-inbox": "Two-way Telnyx SMS · live threads & unread",
+  winback: "Declined-job win-back · tiered discount campaigns",
+  maintenance: "DetectAuto 30/90/180-day maintenance reminders",
+  validation: "ZeroBounce email + USPS address validation",
+  inspections: "DVI compliance · completed-RO checks",
+  "email-audit": "Monthly customer-email deliverability audit",
+  "next-service": "Tentative next-service calendar holds",
+  engagement: "SendGrid opens/clicks → Google Sheets",
+  "marketing-bonus": "Monthly marketing-bonus sheet update",
+};
+
 export interface FetchedManifest {
   entry: AppEntry;
   manifest: ConsoleManifest | null; // null → fetch failed (offline)
@@ -134,15 +148,20 @@ function buildWebhookTiles(entry: AppEntry, fetched: ConsoleManifest | null): Ti
   const subViews: Tile[] = [];
   for (const p of programs) {
     const view = WEBHOOK_TOP_LEVEL[p.id];
+    // Route admin link-outs through the BFF so the admin secret is injected
+    // server-side at redirect time (never rendered into the hub page). The
+    // client resolves this relative path against the BFF base.
+    const externalUrl = p.externalUrl ? `/api/apps/${entry.id}/open?program=${encodeURIComponent(p.id)}` : null;
     const tile: Tile = {
       id: `${entry.id}:${p.id}`,
       appId: entry.id,
       program: p.id,
       name: p.name,
+      tagline: PROGRAM_TAGLINES[p.id],
       icon: p.icon ?? "🕹️",
       theme: m.theme,
       view: view ?? "live",
-      externalUrl: resolveExternalUrl(entry, p.externalUrl),
+      externalUrl,
       enabled: entry.enabled,
       online,
     };

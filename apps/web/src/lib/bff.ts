@@ -19,6 +19,12 @@ export async function fetchState(appId: string): Promise<ConsoleState> {
   return (await res.json()) as ConsoleState;
 }
 
+/** Resolve a tile's link-out href: absolute URLs pass through; relative BFF
+ *  paths (e.g. the /open redirect) are resolved against the BFF base. */
+export function externalHref(externalUrl: string): string {
+  return externalUrl.startsWith("/") ? `${BASE}${externalUrl}` : externalUrl;
+}
+
 /** Build the SSE URL for a tile's stream (optionally filtered by program,
  *  optionally resuming after a cursor id). */
 export function streamUrl(appId: string, program?: string, since?: number): string {

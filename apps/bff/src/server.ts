@@ -64,6 +64,34 @@ app.get("/api/apps", async (req, res) => {
   }
 });
 
+// Resolve a program's admin link-out and 302-redirect with the admin secret
+// injected server-side, so the secret never appears in the hub's page source.
+app.get("/api/apps/:id/open", async (req, res) => {
+  const entry = getReadyEntry(req.params.id);
+  if (!entry) {
+    res.status(404).json({ error: "unknown_or_offline_app", app: req.params.id });
+    return;
+  }
+  const program = typeof req.query.program === "string" ? req.query.program : undefined;
+  try {
+    const manifests = await getManifests();
+    const m = manifests[entry.id];
+    const prog = m?.programs?.find((p) => p.id === program);
+    const raw = prog?.externalUrl ?? m?.externalUrl;
+    if (!raw || !entry.baseUrl) {
+      res.status(404).json({ error: "no_link", app: entry.id, program });
+      return;
+    }
+    const url = new URL(raw, entry.baseUrl);
+    if (entry.adminSecret && /\/(admin|api\/admin)\//.test(url.pathname)) {
+      url.searchParams.set("secret", entry.adminSecret);
+    }
+    res.redirect(302, url.toString());
+  } catch (err) {
+    res.status(502).json({ error: "open_failed", message: String(err) });
+  }
+});
+
 app.get("/api/apps/:id/state", async (req, res) => {
   const entry = getReadyEntry(req.params.id);
   if (!entry) {
