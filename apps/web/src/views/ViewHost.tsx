@@ -6,6 +6,7 @@ import { Placeholder } from "./Placeholder";
 import { AgentsView } from "./agents/AgentsView";
 import { AttributionView } from "./attribution/AttributionView";
 import { Clock } from "../shell/Clock";
+import { externalHref } from "../lib/bff";
 import { sfx } from "../lib/sound";
 import { useSettings } from "../lib/settings";
 
@@ -39,8 +40,8 @@ export function ViewHost({ tile, onBack, onOpenSettings }: { tile: Tile; onBack:
           <Clock />
         </span>
         {tile.externalUrl && (
-          <a className="btn" href={tile.externalUrl} target="_blank" rel="noreferrer">
-            Open full dashboard ↗
+          <a className="btn linkout" href={externalHref(tile.externalUrl)} target="_blank" rel="noreferrer">
+            Open ↗
           </a>
         )}
         <button className="iconbtn" title="Settings" onClick={onOpenSettings}>

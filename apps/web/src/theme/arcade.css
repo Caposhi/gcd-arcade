@@ -271,6 +271,12 @@ body {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+/* Link-out keeps a fixed brand-blue regardless of the view's themed accent,
+   so it never reads as an alarming red "danger" button. */
+.view-header .btn.linkout {
+  background: #18479f;
+  color: #fff;
+}
 .statusdot {
   display: inline-flex;
   align-items: center;

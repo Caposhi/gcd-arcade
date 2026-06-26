@@ -230,7 +230,8 @@ export class AgencyEngine {
   }
 
   ingestEvents(events: ConsoleEvent[]): void {
-    for (const ev of events) {
+    // Process oldest→newest; recentEvents may arrive in either order.
+    for (const ev of [...events].sort((a, b) => (a.id ?? 0) - (b.id ?? 0))) {
       if (ev.id <= this.lastId) continue;
       this.lastId = ev.id;
       this.handle(ev);
