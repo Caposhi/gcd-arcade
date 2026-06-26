@@ -15,6 +15,19 @@ Each file has step-by-step INSTALL notes in its header comment. Both are
 read-only, fire-and-forget, support an optional `CONSOLE_TOKEN`, and emit the
 exact event shapes the hub's views expect.
 
+### Making the live streams light up (milestone wiring)
+
+The `/console/state` counts work as soon as the endpoints are installed, but the
+**live event streams** (SMS/transcripts/automation activity; the attribution
+match-tape) only flow once the apps *announce* milestones. Paste-ready one-liners,
+mapped to each real function, are here:
+
+- [`gcd-webhook/MILESTONES.md`](./gcd-webhook/MILESTONES.md) — `pushConsole(...)`
+  per program (validation, inspections, win-back, maintenance, next-service,
+  email-audit, engagement, transcripts, marketing-bonus; SMS already done).
+- [`attribution/MILESTONES.md`](./attribution/MILESTONES.md) — `consoleEmit("match"|"capi", …)`
+  in the attribution + CAPI jobs to drive the trading-desk tape.
+
 > These changes live in the **backend repos**, not here — this is just the
 > source of truth so they're easy to copy. (This session is scoped to
 > `gcd-arcade`, so I can't push to those repos directly; see "How to apply".)

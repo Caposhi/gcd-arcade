@@ -91,7 +91,7 @@ function firstNumber(obj: Record<string, unknown> | undefined, keys: string[]): 
   return undefined;
 }
 
-const CAPTION_KEYS = ["caption", "text", "copy", "body", "content", "post", "message"];
+const CAPTION_KEYS = ["caption", "text", "copy", "body", "content", "post", "goal", "message"];
 const IMAGE_KEYS = ["imageUrl", "image", "url", "thumbnail", "thumb", "src", "asset"];
 
 function extractCaption(data: unknown): string | undefined {
@@ -115,7 +115,7 @@ function briefIdOf(ev: ConsoleEvent): string {
 
 function normalizeMode(state: ConsoleState): string {
   const raw =
-    firstString(state as Record<string, unknown>, ["phase", "autonomy", "mode"]) ??
+    firstString(state as Record<string, unknown>, ["autonomyPhase", "phase", "autonomy", "mode"]) ??
     firstString(asRecord(state.autonomy), ["phase", "mode", "level"]);
   if (!raw) return "—";
   const l = raw.toLowerCase();
@@ -149,9 +149,13 @@ function normalizePlatforms(state: ConsoleState): Platform[] {
 function normalizeTokenHealth(state: ConsoleState): OfficeState["tokenHealth"] {
   const probe =
     asRecord((state as Record<string, unknown>).tokenHealth) ??
+    asRecord((state as Record<string, unknown>).igToken) ??
     asRecord((state as Record<string, unknown>).ig) ??
     asRecord((state as Record<string, unknown>).instagram) ??
     asRecord((state as Record<string, unknown>).token);
+  // GCD-SOCIAL exposes igToken.daysLeftEst — derive health from days remaining.
+  const days = firstNumber(probe, ["daysLeftEst", "daysLeft", "expiresInDays"]);
+  if (days !== undefined) return days > 7 ? "ok" : days > 0 ? "warn" : "down";
   const status =
     firstString(probe, ["status", "state", "health"]) ??
     firstString(state as Record<string, unknown>, ["tokenHealth", "igTokenHealth"]);
@@ -184,6 +188,8 @@ function publishedFromState(state: ConsoleState): number | undefined {
   return (
     firstNumber(state as Record<string, unknown>, ["published", "postsPublished", "totalPublished"]) ??
     firstNumber(asRecord((state as Record<string, unknown>).counts), ["published", "postsPublished"]) ??
+    // GCD-SOCIAL reports brief queue stats as queue.{done,failed}; done ≈ shipped.
+    firstNumber(asRecord((state as Record<string, unknown>).queue), ["done", "published"]) ??
     firstNumber(asRecord((state as Record<string, unknown>).briefQueue), ["published"])
   );
 }
@@ -230,10 +236,15 @@ export class AgencyEngine {
   }
 
   ingestEvents(events: ConsoleEvent[]): void {
-    // Process oldest→newest; recentEvents may arrive in either order.
-    for (const ev of [...events].sort((a, b) => (a.id ?? 0) - (b.id ?? 0))) {
-      if (ev.id <= this.lastId) continue;
-      this.lastId = ev.id;
+    // Process oldest→newest. IDs may be strings (e.g. "1".."17"); coerce to
+    // numbers so de-dup uses numeric order, not lexicographic ("10" < "9").
+    const ordered = [...events].sort((a, b) => Number(a.id ?? 0) - Number(b.id ?? 0));
+    for (const ev of ordered) {
+      const eid = Number(ev.id);
+      if (Number.isFinite(eid)) {
+        if (eid <= this.lastId) continue;
+        this.lastId = eid;
+      }
       this.handle(ev);
     }
   }
