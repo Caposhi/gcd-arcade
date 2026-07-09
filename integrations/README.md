@@ -10,6 +10,7 @@ do there.
 | GCD-SOCIAL | `caposhi/gcd-agents` | — (already done ✅) | — |
 | Attribution | `german-car-depot-attribution` | [`attribution/console.ts`](./attribution/console.ts) | `apps/api/src/routes/console.ts` + register |
 | GCD Automation | `gcd-webhook` | [`gcd-webhook/console.js`](./gcd-webhook/console.js) | `console.js` beside `server.js` + `mountConsole(app, …)` |
+| GCD QBO Hub | `caposhi/gcd-qbo-hub` | ✅ implemented in-repo (Next.js route handlers) — see [`gcd-qbo-hub/`](./gcd-qbo-hub/) | `src/app/console/{manifest,state,stream}/route.ts` (already in that repo) |
 
 Each file has step-by-step INSTALL notes in its header comment. Both are
 read-only, fire-and-forget, support an optional `CONSOLE_TOKEN`, and emit the

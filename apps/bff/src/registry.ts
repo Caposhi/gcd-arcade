@@ -43,6 +43,12 @@ export const REGISTRY: AppEntry[] = [
     adminSecret: process.env.GCD_WEBHOOK_ADMIN_SECRET,
     enabled: envFlag(process.env.GCD_WEBHOOK_ENABLED, true),
   },
+  {
+    id: "gcd-qbo-hub",
+    baseUrl: process.env.GCD_QBO_HUB_URL,
+    consoleToken: process.env.GCD_QBO_HUB_CONSOLE_TOKEN,
+    enabled: envFlag(process.env.GCD_QBO_HUB_ENABLED, true),
+  },
 ];
 
 export function getAppEntry(id: string): AppEntry | undefined {
