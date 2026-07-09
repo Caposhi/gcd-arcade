@@ -53,6 +53,20 @@ const FALLBACK_MANIFEST: Record<string, ConsoleManifest> = {
       { id: "marketing-bonus", name: "Marketing Bonus", icon: "💰" },
     ],
   },
+  "gcd-qbo-hub": {
+    id: "gcd-qbo-hub",
+    name: "GCD QBO Hub",
+    tagline: "QuickBooks Online automations, reporting & portals",
+    description:
+      "Cash Sheet Sync (live) with Projections, AI Report Assistant & Coworker Portal to come.",
+    theme: { palette: ["#0d1b2a", "#2ec4b6", "#e0fbfc"], style: "ledger control room", icon: "📒" },
+    programs: [
+      { id: "cash-sheet-sync", name: "Cash Sheet Sync", icon: "💵", externalUrl: "/cash-sheet-sync" },
+      { id: "projections", name: "Financial Projections", icon: "📈" },
+      { id: "assistant", name: "AI Report Assistant", icon: "🤖" },
+      { id: "coworker-portal", name: "Coworker Portal", icon: "🧑‍🔧" },
+    ],
+  },
 };
 
 /** gcd-webhook programs that get their own top-level tile (with their view). */
@@ -73,6 +87,11 @@ const PROGRAM_TAGLINES: Record<string, string> = {
   "next-service": "Tentative next-service calendar holds",
   engagement: "SendGrid opens/clicks → Google Sheets",
   "marketing-bonus": "Monthly marketing-bonus sheet update",
+  // gcd-qbo-hub modules
+  "cash-sheet-sync": "Daily cash-sheet → QuickBooks Online posting · live",
+  projections: "Financial projections & cash-flow forecasting · planned",
+  assistant: "AI report assistant over QBO data · planned",
+  "coworker-portal": "Self-service coworker portal · planned",
 };
 
 export interface FetchedManifest {
@@ -191,6 +210,44 @@ function buildWebhookTiles(entry: AppEntry, fetched: ConsoleManifest | null): Ti
   return tiles;
 }
 
+/** GCD QBO Hub: one grouping tile whose children are the hub's modules. Unlike
+ *  gcd-webhook, none of the modules get a bespoke top-level view — the whole
+ *  hub is a single tile that drills into per-module live views. */
+function buildQboHubTile(entry: AppEntry, fetched: ConsoleManifest | null): Tile {
+  const { m, online } = manifestFor(entry, fetched);
+  const theme = m.theme ?? FALLBACK_MANIFEST["gcd-qbo-hub"].theme;
+  const programs: ConsoleProgram[] = m.programs ?? FALLBACK_MANIFEST["gcd-qbo-hub"].programs ?? [];
+
+  const children: Tile[] = programs.map((p) => ({
+    id: `${entry.id}:${p.id}`,
+    appId: entry.id,
+    program: p.id,
+    name: p.name,
+    tagline: PROGRAM_TAGLINES[p.id],
+    icon: p.icon ?? "🕹️",
+    theme,
+    view: "live",
+    externalUrl: resolveExternalUrl(entry, p.externalUrl),
+    enabled: entry.enabled,
+    online,
+  }));
+
+  return {
+    id: entry.id,
+    appId: entry.id,
+    name: m.name,
+    tagline: m.tagline,
+    description: m.description,
+    icon: theme?.icon ?? "📒",
+    theme,
+    view: "automation",
+    externalUrl: resolveExternalUrl(entry, m.externalUrl),
+    enabled: entry.enabled,
+    online,
+    children,
+  };
+}
+
 /** Assemble the full ordered tile list from fetched manifests. */
 export function buildTiles(fetched: Record<string, ConsoleManifest | null>): Tile[] {
   const tiles: Tile[] = [];
@@ -199,6 +256,7 @@ export function buildTiles(fetched: Record<string, ConsoleManifest | null>): Til
     if (entry.id === "gcd-social") tiles.push(buildSocialTile(entry, m));
     else if (entry.id === "attribution") tiles.push(buildAttributionTile(entry, m));
     else if (entry.id === "gcd-webhook") tiles.push(...buildWebhookTiles(entry, m));
+    else if (entry.id === "gcd-qbo-hub") tiles.push(buildQboHubTile(entry, m));
   }
   return tiles;
 }

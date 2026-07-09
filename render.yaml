@@ -21,12 +21,18 @@ services:
       # web host, which is gcd-attribution-web).
       - key: ATTRIBUTION_URL
         value: https://gcd-attribution-api.onrender.com
+      # GCD QBO Hub: the Next.js host that serves /console/* (route handlers live
+      # inside the gcd-qbo-hub repo itself).
+      - key: GCD_QBO_HUB_URL
+        value: https://gcd-qbo-hub.onrender.com
       # Optional per-app console tokens (server-side only; never sent to browser).
       - key: GCD_SOCIAL_CONSOLE_TOKEN
         sync: false
       - key: ATTRIBUTION_CONSOLE_TOKEN
         sync: false
       - key: GCD_WEBHOOK_CONSOLE_TOKEN
+        sync: false
+      - key: GCD_QBO_HUB_CONSOLE_TOKEN
         sync: false
       # Only needed if link-outs to gcd-webhook's /admin/sms and
       # /api/admin/transcripts UIs require ?secret=.
