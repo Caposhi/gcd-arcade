@@ -30,6 +30,8 @@ import {
   LayoutTemplate,
   Send,
   Image as ImageIcon,
+  DollarSign,
+  AlertTriangle,
   type LucideProps,
 } from "lucide-react";
 
@@ -74,6 +76,8 @@ const REGISTRY: Record<string, ComponentType<LucideProps>> = {
   "layout-template": LayoutTemplate,
   send: Send,
   image: ImageIcon,
+  "dollar-sign": DollarSign,
+  "alert-triangle": AlertTriangle,
 };
 
 /** Resolve a kebab-case icon id to its Lucide component, or the default. */

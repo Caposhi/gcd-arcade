@@ -840,3 +840,188 @@ body {
   font-size: 12px;
   color: var(--text-muted);
 }
+
+/* --------------------------- Call Transcripts world -------------------------
+   Plain dashboard, same language as Attribution/Agents (stat-grid, panel,
+   event-row, funnel-row) plus the handful of controls nothing else needed
+   yet: a 4-up panel grid, a text input/select field row, a 3-segment
+   sentiment bar, chat bubbles, and the call-drilldown modal. */
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+}
+.sentiment-bar {
+  display: flex;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background: var(--gray-100);
+  margin-top: 4px;
+}
+.sentiment-bar > i {
+  display: block;
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+/* Standalone pill chip (competitor mentions) — same look as .subcard .badge
+   but not coupled to a .subcard ancestor. */
+.chip {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--text-strong);
+  background: var(--bg-muted);
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+}
+/* Clickable event-row (follow-ups, pricing objections, search results) —
+   resets button chrome so it reads identically to the static event-row. */
+.event-row-btn {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+}
+.event-row-btn:last-child {
+  border-bottom: none;
+}
+.event-row-btn:hover {
+  background: var(--bg-muted);
+}
+
+.field-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.text-input {
+  flex: 1;
+  background: var(--white);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--text-body);
+  font-family: var(--font-body);
+}
+.text-input:focus {
+  outline: 2px solid var(--royal-blue);
+  outline-offset: -1px;
+}
+.select-input {
+  flex: 0 0 auto;
+}
+
+.chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 320px;
+  overflow: auto;
+  margin-bottom: 14px;
+  padding-right: 4px;
+}
+.chat-msg {
+  border-radius: var(--radius-lg);
+  padding: 9px 13px;
+  font-size: 13px;
+  max-width: 80%;
+}
+.chat-msg b {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+}
+.chat-msg.user {
+  align-self: flex-end;
+  background: var(--powder-blue-100);
+}
+.chat-msg.assistant {
+  align-self: flex-start;
+  background: var(--bg-muted);
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(24, 40, 72, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  padding: 24px;
+}
+.modal-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  width: min(720px, 100%);
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  padding: 22px;
+  box-shadow: var(--shadow-xl);
+}
+.modal-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  color: var(--text-strong);
+}
+.modal-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-body);
+  background: var(--bg-muted);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+.modal-summary .dot {
+  margin-top: 4px;
+}
+.modal-transcript {
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.utterance {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 13px;
+  color: var(--text-body);
+  padding: 7px 10px;
+  border-radius: var(--radius-md);
+}
+.utterance.staff {
+  background: var(--powder-blue-100);
+}
+.utterance.caller {
+  background: var(--bg-muted);
+}
+.utterance-who {
+  flex: 0 0 46px;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}

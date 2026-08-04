@@ -15,7 +15,7 @@ import type { AppsResponse, ConsoleManifest } from "@gcd-arcade/shared";
 import { REGISTRY, getReadyEntry } from "./registry.js";
 import { fetchManifest } from "./upstream.js";
 import { buildTiles } from "./tiles.js";
-import { proxyState, proxyStream } from "./proxy.js";
+import { proxyState, proxyStream, proxyTranscriptsGet, proxyTranscriptsAiChat } from "./proxy.js";
 
 const PORT = Number(process.env.PORT) || 8787;
 const MANIFEST_TTL_MS = Number(process.env.MANIFEST_TTL_MS) || 60_000;
@@ -23,6 +23,7 @@ const MANIFEST_TTL_MS = Number(process.env.MANIFEST_TTL_MS) || 60_000;
 const app = express();
 app.disable("x-powered-by");
 app.use(cors()); // hub is private; CORS-open keeps dev (cross-origin) simple
+app.use(express.json()); // only the transcripts ai-chat proxy POSTs a body
 
 // --- manifest cache -------------------------------------------------------
 let manifestCache: { at: number; data: Record<string, ConsoleManifest | null> } | null = null;
@@ -108,6 +109,33 @@ app.get("/api/apps/:id/stream", async (req, res) => {
     return;
   }
   await proxyStream(entry, req, res);
+});
+
+// Call Transcripts world: read-only passthrough to gcd-webhook's transcript
+// admin API (search, call drill-in, keyword/insights stats) — see proxy.ts
+// for the allow-list that keeps this from reaching arbitrary admin routes.
+app.get("/api/apps/:id/transcripts/*", async (req, res) => {
+  const entry = getReadyEntry(req.params.id);
+  if (!entry) {
+    res.status(404).json({ error: "unknown_or_offline_app", app: req.params.id });
+    return;
+  }
+  const subpath = (req.params as Record<string, string>)[0] ?? "";
+  const query: Record<string, string> = {};
+  for (const [k, v] of Object.entries(req.query)) {
+    if (typeof v === "string") query[k] = v;
+  }
+  await proxyTranscriptsGet(entry, subpath, query, res);
+});
+
+// Streams the Claude-backed "chat over your call transcripts" response.
+app.post("/api/apps/:id/transcripts/ai-chat", async (req, res) => {
+  const entry = getReadyEntry(req.params.id);
+  if (!entry) {
+    res.status(404).json({ error: "unknown_or_offline_app", app: req.params.id });
+    return;
+  }
+  await proxyTranscriptsAiChat(entry, req.body?.messages, res);
 });
 
 app.listen(PORT, () => {
