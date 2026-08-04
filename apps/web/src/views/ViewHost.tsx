@@ -6,6 +6,7 @@ import { Automation } from "./Automation";
 import { Placeholder } from "./Placeholder";
 import { AgentsView } from "./agents/AgentsView";
 import { AttributionView } from "./attribution/AttributionView";
+import { TranscriptsView } from "./transcripts/TranscriptsView";
 import { Clock } from "../shell/Clock";
 import { externalHref } from "../lib/bff";
 import { AppIcon } from "../lib/icons";
@@ -59,12 +60,14 @@ function Body({ tile }: { tile: Tile }) {
       return <AgentsView tile={tile} />;
     case "attribution":
       return <AttributionView tile={tile} />;
+    case "transcripts":
+      return <TranscriptsView tile={tile} />;
     case "automation":
       return <Automation tile={tile} />;
     case "placeholder":
       return <Placeholder tile={tile} />;
-    // transcripts / sms-inbox / live still use the generic themed live view
-    // until their bespoke worlds are built.
+    // sms-inbox / live still use the generic themed live view until their
+    // bespoke worlds are built.
     default:
       return <LiveView tile={tile} />;
   }
