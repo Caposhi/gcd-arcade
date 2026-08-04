@@ -13,11 +13,21 @@ export type AgentStatus = "idle" | "working" | "done";
 export type BriefStatus = "running" | "awaiting" | "published" | "escalated";
 export type MomentKind = "published" | "fail" | "escalated" | "levelup" | "stamp" | "work";
 
-export interface PublishedPost {
+export type PostCardStatus = "published" | "escalated";
+
+/** A completed (published or escalated) brief, for the post-card activity
+ *  strip. `startedAt`/`approvedAt` are best-effort: the feed has no distinct
+ *  "human approved" event, so `approvedAt` is the brand-compliance critic's
+ *  PASS timestamp — the closest real gate before publish. */
+export interface PostCard {
   id: string;
+  status: PostCardStatus;
   caption?: string;
   imageUrl?: string;
-  at: string;
+  startedAt?: string;
+  approvedAt?: string;
+  postedAt?: string;
+  escalatedAt?: string;
 }
 
 export interface BriefView {
@@ -28,6 +38,8 @@ export interface BriefView {
   imageUrl?: string;
   verdict?: "PASS" | "FAIL";
   status: BriefStatus;
+  startedAt?: string;
+  approvedAt?: string;
 }
 
 export interface Platform {
@@ -53,7 +65,7 @@ export interface OfficeState {
   brief: BriefView | null;
   running: boolean;
   queueCount: number;
-  publishedPosts: PublishedPost[];
+  posts: PostCard[];
   meters: Meters;
   mode: string;
   platforms: Platform[];
@@ -184,6 +196,13 @@ function isFresh(ev: ConsoleEvent): boolean {
   return Number.isNaN(t) ? true : Date.now() - t < 25000;
 }
 
+/** Not every event carries `createdAt` — fall back to observed time. */
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+const POST_HISTORY_CAP = 24;
+
 function publishedFromState(state: ConsoleState): number | undefined {
   return (
     firstNumber(state as Record<string, unknown>, ["published", "postsPublished", "totalPublished"]) ??
@@ -208,7 +227,7 @@ export class AgencyEngine {
   private agents: Record<string, AgentStatus> = {};
   private agentMsg: Record<string, string | undefined> = {};
   private brief: BriefView | null = null;
-  private publishedPosts: PublishedPost[] = [];
+  private posts: PostCard[] = [];
   private queueCount = 0;
   private mode = "—";
   private platforms: Platform[] = normalizePlatforms({});
@@ -250,7 +269,7 @@ export class AgencyEngine {
   }
 
   private setBrief(ev: ConsoleEvent): void {
-    this.brief = { id: briefIdOf(ev), phaseIndex: 0, status: "running" };
+    this.brief = { id: briefIdOf(ev), phaseIndex: 0, status: "running", startedAt: ev.createdAt ?? nowIso() };
     for (const id of PIPELINE) this.agents[id] = "idle";
     this.agentMsg = {};
     const cap = extractCaption(ev.data);
@@ -314,6 +333,9 @@ export class AgencyEngine {
       this.agents["brand-compliance-critic"] = "done";
       if (this.brief) {
         this.brief.verdict = pass ? "PASS" : "FAIL";
+        // PASS is the closest real "approved" gate before publish — there's no
+        // distinct human-approval event in the handled feed kinds.
+        if (pass) this.brief.approvedAt = ev.createdAt ?? nowIso();
         // FAIL → send-back: token returns to the copywriter to rework
         if (!pass) this.brief.phaseIndex = Math.min(this.brief.phaseIndex, PIPELINE.indexOf("copywriter"));
       }
@@ -336,14 +358,17 @@ export class AgencyEngine {
       }
       // Always reflect the shipped post visually (de-duped by id below).
       const postId = this.brief?.id ?? `post-${this.lastId}`;
-      if (!this.publishedPosts.some((p) => p.id === postId)) {
-        this.publishedPosts.unshift({
+      if (!this.posts.some((p) => p.id === postId)) {
+        this.posts.unshift({
           id: postId,
+          status: "published",
           caption: this.brief?.caption,
           imageUrl: this.brief?.imageUrl,
-          at: ev.createdAt ?? "",
+          startedAt: this.brief?.startedAt,
+          approvedAt: this.brief?.approvedAt,
+          postedAt: ev.createdAt ?? nowIso(),
         });
-        this.publishedPosts = this.publishedPosts.slice(0, 6);
+        this.posts = this.posts.slice(0, POST_HISTORY_CAP);
       }
       // Only count + celebrate genuinely live publishes (not history replays).
       if (this.currentFresh) {
@@ -362,6 +387,21 @@ export class AgencyEngine {
     }
     if (kind === "brief:escalated") {
       if (this.brief) this.brief.status = "escalated";
+      // Escalation is a terminal outcome for the card strip too (unlike a
+      // plain critic FAIL, which just sends the brief back for rework).
+      const postId = this.brief?.id ?? `post-${this.lastId}`;
+      if (this.brief && !this.posts.some((p) => p.id === postId)) {
+        this.posts.unshift({
+          id: postId,
+          status: "escalated",
+          caption: this.brief.caption,
+          imageUrl: this.brief.imageUrl,
+          startedAt: this.brief.startedAt,
+          approvedAt: this.brief.approvedAt,
+          escalatedAt: ev.createdAt ?? nowIso(),
+        });
+        this.posts = this.posts.slice(0, POST_HISTORY_CAP);
+      }
       if (this.currentFresh) {
         this.save.streak = 0;
         persistSave(this.save);
@@ -388,7 +428,7 @@ export class AgencyEngine {
       brief: this.brief ? { ...this.brief } : null,
       running,
       queueCount: this.queueCount,
-      publishedPosts: [...this.publishedPosts],
+      posts: [...this.posts],
       meters: {
         level: lvl.level,
         xpInto: lvl.into,

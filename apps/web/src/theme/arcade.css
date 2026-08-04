@@ -617,6 +617,76 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* GCD Social: recent-activity post-card strip — newest first, left to right */
+.post-strip {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+.post-card {
+  flex: 0 0 auto;
+  width: 180px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+}
+.post-card.escalated {
+  border-color: var(--danger);
+}
+.post-card .post-thumb {
+  height: 200px;
+  background-color: var(--bg-muted);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  display: grid;
+  place-items: center;
+  color: var(--gray-400);
+}
+.post-card .post-thumb svg {
+  width: 28px;
+  height: 28px;
+}
+.post-card .post-body {
+  padding: 12px;
+}
+.post-card .post-caption {
+  font-size: 12.5px;
+  color: var(--text-strong);
+  line-height: 1.35;
+  margin-bottom: 10px;
+  min-height: 34px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.post-card .post-meta-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.post-card .post-meta-row b {
+  color: var(--text-body);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.post-card .post-badge {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--danger);
+  background: rgba(200, 30, 30, 0.08);
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+}
+
 /* ----------------------------- loading state ------------------------------ */
 .boot {
   position: fixed;
