@@ -851,6 +851,13 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 24px;
 }
+/* Caps a list-heavy panel's own height so a long list (e.g. the follow-up
+   queue) scrolls internally instead of stretching shorter sibling panels to
+   match via CSS grid's default row-height equalization. */
+.panel-scroll {
+  max-height: 420px;
+  overflow: auto;
+}
 .sentiment-bar {
   display: flex;
   height: 10px;

@@ -251,6 +251,11 @@ function HealthStrip({ health, status, activity }: { health: Health; status: str
 // ----------------------------- breakdown panels -------------------------------
 
 function BreakdownPanel({ title, rows, color }: { title: string; rows: KV[]; color: string }) {
+  // Every field here is a bounded enum (8-10 values max at the schema level),
+  // so show all of them — a top-N cap would silently hide real categories
+  // (e.g. "billing"/"warranty" complaints, "oil_change" service calls) with
+  // no indication anything was cut, and it also let taller sibling panels
+  // (the follow-up queue) stretch this one to match via CSS grid row-sizing.
   const max = Math.max(1, ...rows.map((r) => r.n));
   return (
     <div className="panel">
@@ -258,7 +263,7 @@ function BreakdownPanel({ title, rows, color }: { title: string; rows: KV[]; col
       {rows.length === 0 ? (
         <div className="empty">No data yet</div>
       ) : (
-        rows.slice(0, 6).map((r) => (
+        rows.map((r) => (
           <div className="funnel-row" key={r.k}>
             <span className="stage" style={{ width: 96 }}>
               {titleCase(r.k)}
@@ -277,7 +282,7 @@ function BreakdownPanel({ title, rows, color }: { title: string; rows: KV[]; col
 function FollowUpQueue({ items, total, onOpen }: { items: FollowUp[]; total?: number; onOpen: (id: string) => void }) {
   const Icon = iconFor("phone-incoming");
   return (
-    <div className="panel">
+    <div className="panel panel-scroll">
       <h3>Follow-up Queue {total ? `(${total})` : ""}</h3>
       {items.length === 0 ? (
         <div className="empty">Nothing pending — nice.</div>
@@ -321,12 +326,12 @@ function CompetitorRadar({ items }: { items: Competitor[] }) {
 function PricingObjections({ items, onOpen }: { items: PricingMention[]; onOpen: (id: string) => void }) {
   const Icon = iconFor("dollar-sign");
   return (
-    <div className="panel">
+    <div className="panel panel-scroll">
       <h3>Pricing Objections</h3>
       {items.length === 0 ? (
         <div className="empty">No pricing pushback logged</div>
       ) : (
-        items.slice(0, 8).map((p, i) => (
+        items.map((p, i) => (
           <button className="event-row event-row-btn" key={`${p.callId}-${i}`} onClick={() => onOpen(p.callId)}>
             <span className="row-icon">
               <Icon />
@@ -393,18 +398,28 @@ function SearchPanel({ appId, onOpen }: { appId: string; onOpen: (id: string) =>
       {error && <div className="empty">Search failed — {error}</div>}
       {results && results.length === 0 && !loading && <div className="empty">No matching calls</div>}
       {results &&
-        results.map((r) => (
-          <button className="event-row event-row-btn" key={r.id} onClick={() => onOpen(r.id)}>
-            <span className="dot" style={{ background: TONE_COLOR[sentimentTone(r.ai_sentiment)] }} />
-            <span className="row-msg wrap">
-              <b>{r.caller_name || r.caller_number || "Unknown caller"}</b>
-              <span className="row-sub" dangerouslySetInnerHTML={{ __html: r.snippet || r.ai_summary || "" }} />
-            </span>
-            <span className="row-ts">
-              {fmtWhen(r.start_time)} · {fmtDuration(r.duration_ms)}
-            </span>
-          </button>
-        ))}
+        results.map((r) => {
+          // With an active search, the snippet is FTS5's <mark>-highlighted
+          // match context — genuinely useful, show it. Browsing with no
+          // query, the "snippet" is just the first 200 characters of the
+          // transcript, which for a phone call is almost always the same
+          // boilerplate greeting ("Thank you for calling...") on every row —
+          // the AI summary is far more useful to scan there.
+          const isRealMatch = !!r.snippet && r.snippet.includes("<mark");
+          const preview = (isRealMatch ? r.snippet : r.ai_summary || r.snippet) ?? "";
+          return (
+            <button className="event-row event-row-btn" key={r.id} onClick={() => onOpen(r.id)}>
+              <span className="dot" style={{ background: TONE_COLOR[sentimentTone(r.ai_sentiment)] }} />
+              <span className="row-msg wrap">
+                <b>{r.caller_name || r.caller_number || "Unknown caller"}</b>
+                <span className="row-sub" dangerouslySetInnerHTML={{ __html: preview }} />
+              </span>
+              <span className="row-ts">
+                {fmtWhen(r.start_time)} · {fmtDuration(r.duration_ms)}
+              </span>
+            </button>
+          );
+        })}
     </div>
   );
 }
