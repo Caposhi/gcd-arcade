@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { ChevronLeft, Settings as SettingsIcon } from "lucide-react";
 import type { Tile } from "@gcd-arcade/shared";
 import { LiveView } from "./LiveView";
 import { Automation } from "./Automation";
@@ -7,30 +8,29 @@ import { AgentsView } from "./agents/AgentsView";
 import { AttributionView } from "./attribution/AttributionView";
 import { Clock } from "../shell/Clock";
 import { externalHref } from "../lib/bff";
-import { sfx } from "../lib/sound";
-import { useSettings } from "../lib/settings";
+import { AppIcon } from "../lib/icons";
 
-/** Frames a tile's themed view: header (with back + link-out) and body. */
+/** Frames a tile's themed view: header (back, icon, name, tagline, link-out,
+ *  settings) and body. Light chrome; every tile with an externalUrl keeps
+ *  its "Open full app" link-out here, on every screen. */
 export function ViewHost({ tile, onBack, onOpenSettings }: { tile: Tile; onBack: () => void; onOpenSettings: () => void }) {
-  const { sound } = useSettings();
-
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" || e.key === "Backspace") {
-        if (sound) sfx.back();
-        onBack();
-      }
+      if (e.key === "Escape" || e.key === "Backspace") onBack();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onBack, sound]);
-
-  const accent = tile.theme?.palette?.[1] ?? tile.theme?.palette?.[0];
+  }, [onBack]);
 
   return (
-    <div className="view" style={accent ? ({ ["--gcd-royal" as string]: accent } as React.CSSProperties) : undefined}>
+    <div className="view">
       <div className="view-header">
-        <span className="vicon">{tile.icon}</span>
+        <button className="iconbtn" title="Back" onClick={onBack}>
+          <ChevronLeft />
+        </button>
+        <span className="vicon">
+          <AppIcon tileId={tile.id} />
+        </span>
         <div>
           <h1>{tile.name}</h1>
           {tile.tagline && <div className="tag">{tile.tagline}</div>}
@@ -40,21 +40,12 @@ export function ViewHost({ tile, onBack, onOpenSettings }: { tile: Tile; onBack:
           <Clock />
         </span>
         {tile.externalUrl && (
-          <a className="btn linkout" href={externalHref(tile.externalUrl)} target="_blank" rel="noreferrer">
-            Open ↗
+          <a className="btn btn-outline" href={externalHref(tile.externalUrl)} target="_blank" rel="noreferrer">
+            Open full app ↗
           </a>
         )}
         <button className="iconbtn" title="Settings" onClick={onOpenSettings}>
-          ⚙️
-        </button>
-        <button
-          className="btn ghost"
-          onClick={() => {
-            if (sound) sfx.back();
-            onBack();
-          }}
-        >
-          ← Back
+          <SettingsIcon />
         </button>
       </div>
       <Body tile={tile} />
