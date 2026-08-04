@@ -415,6 +415,23 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Two-line variant (name/role + status, or caption + sub-line) — wraps
+   instead of single-line ellipsis. */
+.event-row .row-msg.wrap {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  line-height: 1.4;
+}
+.event-row .row-sub {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .event-row .row-ts {
   font-size: 11px;
   color: var(--text-muted);
@@ -473,6 +490,45 @@ body {
   background: var(--bg-muted);
   padding: 3px 10px;
   border-radius: var(--radius-pill);
+}
+
+/* stat cards (Agents / Attribution overview rows) */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--white);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 18px;
+}
+.stat-card .lbl {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.stat-card .val {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+.stat-card .val.accent {
+  color: var(--royal-blue);
+}
+.stat-card .val.muted {
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
 }
 
 /* ----------------------------- loading state ------------------------------ */

@@ -1,7 +1,7 @@
 /**
  * The agency cast: maps GCD-SOCIAL's technical agent ids to named characters
- * with a role, avatar, and accent color. Desk order follows the brief's real
- * journey (analytics → … → posting), so the project token tours left-to-right.
+ * with a role and a Lucide icon id. Order follows the brief's real journey
+ * (analytics → … → posting).
  *
  * Rename freely — only `id` must match the feed's agent ids.
  */
@@ -9,21 +9,20 @@ export interface Character {
   id: string;
   name: string;
   role: string;
-  emoji: string;
-  color: string;
+  icon: string;
 }
 
-export const AGENCY_NAME = "GCD SOCIAL";
-export const AGENCY_TAGLINE = "CREATIVE GARAGE";
+export const AGENCY_NAME = "GCD Social";
+export const AGENCY_TAGLINE = "Content studio";
 
 export const CAST: Character[] = [
-  { id: "analytics", name: "Dana", role: "Analyst", emoji: "📊", color: "#36c2ff" },
-  { id: "copywriter", name: "Remy", role: "Copywriter", emoji: "✍️", color: "#ffce4d" },
-  { id: "image", name: "Pixel", role: "Art Director", emoji: "🎨", color: "#ff6ad5" },
-  { id: "hashtag-seo-timing", name: "Tess", role: "SEO & Timing", emoji: "🏷️", color: "#7cf08a" },
-  { id: "brand-compliance-critic", name: "Cole", role: "Brand Critic", emoji: "🧐", color: "#ff8a5c" },
-  { id: "platform-formatter", name: "Fran", role: "Formatter", emoji: "🧩", color: "#b69cff" },
-  { id: "posting", name: "Posty", role: "Publisher", emoji: "🚀", color: "#ff5470" },
+  { id: "analytics", name: "Dana", role: "Analytics", icon: "bar-chart-3" },
+  { id: "copywriter", name: "Remy", role: "Copywriting", icon: "pen-tool" },
+  { id: "image", name: "Pixel", role: "Art direction", icon: "wand-2" },
+  { id: "hashtag-seo-timing", name: "Tess", role: "SEO", icon: "search" },
+  { id: "brand-compliance-critic", name: "Cole", role: "Critic", icon: "clipboard-check" },
+  { id: "platform-formatter", name: "Fran", role: "Formatting", icon: "layout-template" },
+  { id: "posting", name: "Posty", role: "Publishing", icon: "send" },
 ];
 
 export const CAST_BY_ID: Record<string, Character> = Object.fromEntries(CAST.map((c) => [c.id, c]));
