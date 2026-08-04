@@ -1,29 +1,18 @@
-import { useEffect } from "react";
-import { sfx } from "../lib/sound";
-import { useSettings } from "../lib/settings";
-
-/** Short PlayStation-style boot intro. Skippable; shown once per session. */
-export function Boot({ onDone }: { onDone: () => void }) {
-  const { sound } = useSettings();
-
-  useEffect(() => {
-    if (sound) sfx.boot();
-    const t = setTimeout(onDone, 2800);
-    const onKey = () => onDone();
-    window.addEventListener("keydown", onKey);
-    return () => {
-      clearTimeout(t);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [onDone, sound]);
-
+/** Plain loading state shown only while the first fetchApps() call is in
+ *  flight — tied to real data readiness, not a timer. No "press any key to
+ *  skip"; there's nothing to skip. */
+export function Boot() {
   return (
-    <div className="boot" onClick={onDone}>
-      <div className="logo">
-        GCD<b>·</b>ARCADE
+    <div className="boot">
+      <div>
+        <div className="logo">
+          GCD <b>·</b> ARCADE
+        </div>
+        <div className="bar">
+          <i />
+        </div>
+        <div className="caption">Loading your dashboard…</div>
       </div>
-      <div className="bar" />
-      <div className="skip">press any key to skip</div>
     </div>
   );
 }
