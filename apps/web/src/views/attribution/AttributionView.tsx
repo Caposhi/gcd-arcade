@@ -52,7 +52,7 @@ export function AttributionView({ tile }: { tile: Tile }) {
   }, [events]);
 
   return (
-    <div className="view-body" style={{ gridTemplateColumns: "1fr", overflow: "auto" }}>
+    <div className="view-body" style={{ gridTemplateColumns: "1fr", overflowY: "auto", overflowX: "hidden" }}>
       <div>
         <StatBoard s={term} />
         <div className="two-col" style={{ marginBottom: 24 }}>
