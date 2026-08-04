@@ -2,12 +2,26 @@ import { useEffect, useState } from "react";
 import type { ConsoleEvent, ConsoleState, Tile } from "@gcd-arcade/shared";
 import { fetchState } from "../lib/bff";
 import { useStream } from "../lib/sse";
+import { summarizeBadge } from "../lib/badges";
+import { iconFor } from "../lib/icons";
+
+/** Best-effort icon for an event row from its `kind` string — ConsoleEvent
+ *  carries no icon field, so this pattern-matches the same way badges.ts and
+ *  the agents/attribution engines probe loosely-typed feed data. */
+function iconIdForKind(kind: string | undefined): string {
+  const k = (kind ?? "").toLowerCase();
+  if (k.includes("incoming") || k.includes("call")) return "phone-incoming";
+  if (k.includes("transcript") || k.includes("file")) return "file-text";
+  if (k.includes("fail") || k.includes("error") || k.includes("reject")) return "x-circle";
+  if (k.includes("done") || k.includes("complet") || k.includes("success") || k.includes("tagg")) return "check-circle";
+  return "layout-grid";
+}
 
 /**
  * Generic themed live view used as the foundation default for every tile.
  * Left: a compact snapshot from /console/state. Right: the live event stream.
- * Per-app bespoke "worlds" (8-bit shop floor, neon terminal, etc.) layer on
- * top of this later; this proves the end-to-end SSE wiring for all tiles now.
+ * No logic changes from the original — same fetchState + useStream wiring;
+ * this is a restyle only.
  */
 export function LiveView({ tile }: { tile: Tile }) {
   const [state, setState] = useState<ConsoleState | undefined>();
@@ -30,16 +44,20 @@ export function LiveView({ tile }: { tile: Tile }) {
     <div className="view-body">
       <div className="panel">
         <h3>Snapshot</h3>
+        <div className="kpi-row">
+          <span>Status</span>
+          <b>{summarizeBadge(tile, state)}</b>
+        </div>
         <StateSnapshot state={state} program={tile.program} />
       </div>
       <div className="panel">
-        <h3>Live stream {status === "open" ? "●" : ""}</h3>
+        <h3>Live activity {status === "open" && <span className="statusdot open" />}</h3>
         {streamEvents.length === 0 ? (
           <div className="empty">
             {status === "error" ? "Stream unavailable — app may be offline." : "Waiting for live events…"}
           </div>
         ) : (
-          <div className="eventlog">
+          <div>
             {streamEvents.map((e) => (
               <EventRow key={`${e.appId ?? ""}-${e.id}`} ev={e} />
             ))}
@@ -52,11 +70,14 @@ export function LiveView({ tile }: { tile: Tile }) {
 
 function EventRow({ ev }: { ev: ConsoleEvent }) {
   const ts = ev.createdAt ? new Date(ev.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "";
+  const Icon = iconFor(iconIdForKind(ev.kind));
   return (
-    <div className="ev">
-      <span className="kind">{ev.kind}</span>
-      <span className="msg">{ev.message ?? (ev.program ? `[${ev.program}]` : "")}</span>
-      <span className="ts">{ts}</span>
+    <div className="event-row">
+      <span className="row-icon">
+        <Icon />
+      </span>
+      <span className="row-msg">{ev.message ?? ev.kind ?? (ev.program ? `[${ev.program}]` : "")}</span>
+      <span className="row-ts">{ts}</span>
     </div>
   );
 }
@@ -88,11 +109,11 @@ function StateSnapshot({ state, program }: { state: ConsoleState | undefined; pr
     }
   }
 
-  if (rows.length === 0) return <div className="empty">No snapshot fields.</div>;
+  if (rows.length === 0) return null;
   return (
     <div>
       {rows.map((r) => (
-        <div className="kpi" key={r.k}>
+        <div className="kpi-row" key={r.k}>
           <span>{r.k}</span>
           <b>{r.v}</b>
         </div>
