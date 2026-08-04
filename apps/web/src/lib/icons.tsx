@@ -29,6 +29,7 @@ import {
   ClipboardCheck,
   LayoutTemplate,
   Send,
+  Image as ImageIcon,
   type LucideProps,
 } from "lucide-react";
 
@@ -72,6 +73,7 @@ const REGISTRY: Record<string, ComponentType<LucideProps>> = {
   "clipboard-check": ClipboardCheck,
   "layout-template": LayoutTemplate,
   send: Send,
+  image: ImageIcon,
 };
 
 /** Resolve a kebab-case icon id to its Lucide component, or the default. */
