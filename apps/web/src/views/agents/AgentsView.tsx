@@ -2,45 +2,69 @@ import { useEffect, useRef, useState } from "react";
 import type { Tile } from "@gcd-arcade/shared";
 import { fetchState } from "../../lib/bff";
 import { useStream } from "../../lib/sse";
-import { useSettings } from "../../lib/settings";
-import { sfx } from "../../lib/sound";
+import { CAST_BY_ID } from "./cast";
 import { AgencyEngine, type Moment, type OfficeState } from "./engine";
-import { Office } from "./Office";
-import { Hud } from "./Hud";
-import { MomentOverlay } from "./Moments";
-import "./agents.css";
+import { TeamList } from "./Office";
+import { StatRow } from "./Hud";
+import { ActivityList, type ActivityItem } from "./Moments";
 
-const MOMENT_MS: Record<string, number> = { published: 2600, levelup: 2600, fail: 1700, escalated: 2200 };
+let activitySeq = 0;
+
+/** Turn a dramatic beat into a plain activity-log line. The critic always
+ *  sends work back to the copywriter (engine.ts rewinds phaseIndex to
+ *  "copywriter" on FAIL), so naming both agents here reflects how the
+ *  pipeline actually works, not a guess. */
+function describeMoment(m: Moment, office: OfficeState): string | null {
+  const critic = CAST_BY_ID["brand-compliance-critic"]?.name ?? "The critic";
+  const writer = CAST_BY_ID["copywriter"]?.name ?? "the copywriter";
+  switch (m.kind) {
+    case "published":
+      return office.brief?.caption ? `Post published — "${office.brief.caption}"` : "Post published";
+    case "stamp":
+      return `${critic} approved the draft`;
+    case "fail":
+      return `${critic} sent ${writer}'s draft back for revision`;
+    case "escalated":
+      return "Brief escalated for human review";
+    default:
+      return null; // "work" (soft tick) and "levelup" (dropped game meter) — no log line
+  }
+}
+
+function iconForMoment(kind: Moment["kind"]): string {
+  switch (kind) {
+    case "published":
+      return "check-circle";
+    case "fail":
+      return "x-circle";
+    case "escalated":
+      return "x-circle";
+    default:
+      return "check-circle";
+  }
+}
 
 /**
- * GCD-SOCIAL "Agents Live View" rendered as a Game Dev Tycoon-style marketing
- * agency. The engine reduces the live SSE feed into office state; this
- * component owns the React glue, sound, and the transient "moment" overlays.
+ * GCD-SOCIAL "Content Studio" — a plain, light presentation of the agency
+ * engine's live state. The engine reduces the SSE feed into `OfficeState`;
+ * this component owns the React glue only (no sound, no game flourishes).
  */
 export function AgentsView({ tile }: { tile: Tile }) {
-  const { sound } = useSettings();
-  const soundRef = useRef(sound);
-  soundRef.current = sound;
+  const { events } = useStream(tile.appId);
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
 
-  const { events, status } = useStream(tile.appId);
-  const [moment, setMoment] = useState<Moment | null>(null);
-  const clearTimer = useRef<ReturnType<typeof setTimeout>>();
-
-  // The moment handler is kept in a ref so the engine (created once, below) can
-  // always call the latest closure without re-instantiating.
-  const onMomentRef = useRef<(m: Moment) => void>(() => {});
-  onMomentRef.current = (m) => {
-    if (soundRef.current) playMoment(m);
-    if (m.kind === "work") return; // soft tick only, no overlay
-    setMoment(m);
-    clearTimeout(clearTimer.current);
-    clearTimer.current = setTimeout(() => setMoment(null), MOMENT_MS[m.kind] ?? 1800);
+  const onMomentRef = useRef<(m: Moment, office: OfficeState) => void>(() => {});
+  onMomentRef.current = (m, office) => {
+    const msg = describeMoment(m, office);
+    if (!msg) return;
+    setActivity((prev) =>
+      [{ id: ++activitySeq, icon: iconForMoment(m.kind), msg, at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }, ...prev].slice(0, 12)
+    );
   };
 
-  // One engine instance for the lifetime of the view; seed initial office state.
   const engineRef = useRef<AgencyEngine | null>(null);
   const [office, setOffice] = useState<OfficeState>(() => {
-    const engine = new AgencyEngine((m) => onMomentRef.current(m));
+    const engine = new AgencyEngine((m) => onMomentRef.current(m, engineRef.current!.getState()));
     engineRef.current = engine;
     return engine.getState();
   });
@@ -53,9 +77,9 @@ export function AgentsView({ tile }: { tile: Tile }) {
         .then((s) => {
           if (!alive) return;
           engineRef.current!.ingestState(s);
-          // Seed from the authoritative recent-event history so the office
+          // Seed from the authoritative recent-event history so the view
           // reflects the latest brief even if the live stream came up late or
-          // replayed only partially. Old events update visuals, not fanfare.
+          // replayed only partially. Old events update visuals, not the log.
           if (Array.isArray(s.recentEvents)) engineRef.current!.ingestEvents(s.recentEvents);
           setOffice(engineRef.current!.getState());
         })
@@ -75,89 +99,15 @@ export function AgentsView({ tile }: { tile: Tile }) {
     setOffice(engineRef.current!.getState());
   }, [events]);
 
-  useEffect(() => () => clearTimeout(clearTimer.current), []);
-
-  if (!office) return null;
-
   return (
-    <div className="agency">
-      <Hud office={office} />
-      <div className="agency-stage">
-        <Office office={office} />
-        <aside className="agency-side">
-          <CurrentBrief office={office} streamStatus={status} />
-          <div className="sidebox" style={{ flex: 1 }}>
-            <h4>📣 Shipped Posts</h4>
-            {office.publishedPosts.length === 0 ? (
-              <div style={{ color: "#9fb0d6", fontSize: 13 }}>No posts shipped yet this session.</div>
-            ) : (
-              office.publishedPosts.map((p) => (
-                <div className="postcard" key={p.id}>
-                  <div className="pthumb" style={p.imageUrl ? { backgroundImage: `url(${p.imageUrl})` } : undefined}>
-                    {p.imageUrl ? "" : "🖼️"}
-                  </div>
-                  <div className="pcap">{p.caption ?? "Published post"}</div>
-                </div>
-              ))
-            )}
-          </div>
-        </aside>
+    <div className="view-body" style={{ gridTemplateColumns: "1fr", overflow: "auto" }}>
+      <div>
+        <StatRow office={office} />
+        <div className="two-col">
+          <TeamList office={office} />
+          <ActivityList items={activity} />
+        </div>
       </div>
-      <MomentOverlay moment={moment} />
     </div>
   );
-}
-
-function CurrentBrief({ office, streamStatus }: { office: OfficeState; streamStatus: string }) {
-  const b = office.brief;
-  return (
-    <div className="sidebox">
-      <h4>
-        🎬 On the Floor{" "}
-        <span style={{ color: streamStatus === "open" ? "#38d96b" : streamStatus === "error" ? "#e9456a" : "#f8e000" }}>
-          ●
-        </span>
-      </h4>
-      {!b || !office.running ? (
-        <div style={{ color: "#9fb0d6", fontSize: 13 }}>
-          {streamStatus === "error" ? "Live feed unavailable — agency offline." : "No active brief. Studio idle."}
-        </div>
-      ) : (
-        <div style={{ fontSize: 13 }}>
-          <div style={{ fontWeight: 800, marginBottom: 4 }}>
-            {b.status === "awaiting" ? "Awaiting sign-off" : "In production"}
-          </div>
-          <div style={{ color: "#cdd8f5" }}>{b.caption ?? `Brief ${b.id}`}</div>
-          {b.verdict && (
-            <div style={{ marginTop: 6, fontWeight: 700, color: b.verdict === "PASS" ? "#7cf08a" : "#ff8aa0" }}>
-              Critic: {b.verdict}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function playMoment(m: Moment): void {
-  switch (m.kind) {
-    case "published":
-      sfx.cash();
-      break;
-    case "levelup":
-      sfx.levelup();
-      break;
-    case "fail":
-      sfx.fail();
-      break;
-    case "escalated":
-      sfx.alert();
-      break;
-    case "stamp":
-      sfx.stamp();
-      break;
-    case "work":
-      sfx.work();
-      break;
-  }
 }

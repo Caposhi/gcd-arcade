@@ -1,24 +1,25 @@
 import type { TerminalState } from "./engine";
 import { moneyExact, timeText } from "./format";
 
-/** The "tape" — attribution matches, CAPI sends, and failures printing live. */
+/** "Recent matches" — amount, description, timestamp. Filtered to the
+ *  `match` prints from engine.ts's tape (CAPI sends and failures are already
+ *  visible as job status in the Lanes list, so this list stays focused on
+ *  matches per the mockup). */
 export function Tape({ s }: { s: TerminalState }) {
+  const matches = s.prints.filter((p) => p.kind === "match");
   return (
-    <div className="attr-tape">
-      <h4>▸ Tape · Matches & Conversions</h4>
-      {s.prints.length === 0 ? (
-        <div className="empty-tape">Quiet market — waiting for the next match to print…</div>
+    <div className="panel">
+      <h3>Recent matches</h3>
+      {matches.length === 0 ? (
+        <div className="empty">Waiting for the next match…</div>
       ) : (
-        <div className="tape-rows">
-          {s.prints.map((p) => (
-            <div className={`print ${p.kind}`} key={p.id}>
-              {p.amount !== undefined && <span className="amt">+{moneyExact(p.amount)}</span>}
-              {p.kind === "capi" ? (p.accepted ? "✓ " : "✗ ") : ""}
-              {p.text}
-              <span className="when">{timeText(p.at)}</span>
-            </div>
-          ))}
-        </div>
+        matches.map((p) => (
+          <div className="event-row" key={p.id}>
+            <span className="row-amt">{p.amount !== undefined ? `+${moneyExact(p.amount)}` : "—"}</span>
+            <span className="row-msg">{p.text}</span>
+            <span className="row-ts">{timeText(p.at)}</span>
+          </div>
+        ))
       )}
     </div>
   );

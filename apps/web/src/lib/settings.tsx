@@ -1,14 +1,13 @@
-/** Global UI settings (sound, music, CRT, TV mode), persisted to localStorage. */
+/** Global UI settings, persisted to localStorage. */
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 export interface Settings {
-  sound: boolean; // navigation SFX
-  music: boolean; // ambient background music — OFF by default
-  crt: boolean; // CRT glow + scanlines
-  tvMode: boolean; // larger, room-readable layout
+  appearance: "light" | "dark" | "auto";
+  liveBadges: boolean; // show/hide the home-screen status dots
+  reducedMotion: boolean; // turn off transitions and animation
 }
 
-const DEFAULTS: Settings = { sound: true, music: false, crt: true, tvMode: false };
+const DEFAULTS: Settings = { appearance: "light", liveBadges: true, reducedMotion: false };
 const KEY = "gcd-arcade:settings";
 
 function load(): Settings {
@@ -23,7 +22,7 @@ function load(): Settings {
 
 interface SettingsCtx extends Settings {
   set: <K extends keyof Settings>(key: K, value: Settings[K]) => void;
-  toggle: (key: keyof Settings) => void;
+  toggle: (key: "liveBadges" | "reducedMotion") => void;
 }
 
 const Ctx = createContext<SettingsCtx | null>(null);
