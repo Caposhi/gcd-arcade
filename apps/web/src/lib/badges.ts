@@ -13,8 +13,8 @@ function obj(v: unknown): Record<string, unknown> | undefined {
  * probe a few well-known fields and fall back to "online" rather than guessing.
  */
 export function summarizeBadge(tile: Tile, state: ConsoleState | undefined): string {
-  if (!tile.enabled) return "INSERT COIN";
-  if (!tile.online) return "OFFLINE";
+  if (!tile.enabled) return "Coming soon";
+  if (!tile.online) return "Offline";
   if (!state) return "···";
 
   // gcd-social: autonomy phase / awaiting approval
