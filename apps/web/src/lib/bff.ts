@@ -1,6 +1,6 @@
 /** Thin client for the BFF. The browser never talks to backends directly. */
 import type { AppsResponse, ConsoleState } from "@gcd-arcade/shared";
-import type { ReportingBridgeResponse } from "../views/qbo/types";
+import type { ReportingBridgeResponse, CashSheetSyncBridgeResponse } from "../views/qbo/types";
 
 const BASE = (import.meta.env.VITE_BFF_URL ?? "").replace(/\/$/, "");
 
@@ -96,6 +96,20 @@ export async function refreshQboReporting(
   const res = await fetch(u.toString(), { method: "POST" });
   if (!res.ok) throw new Error(`/reporting refresh ${res.status}`);
   return (await res.json()) as ReportingBridgeResponse;
+}
+
+/** GET /api/apps/:id/cash-sheet-sync?window=&granularity= — snapshot, trend,
+ *  exceptions queue, recent edits, payee leaderboard, and GCD Pal insights. */
+export async function fetchQboCashSheetSync(
+  appId: string,
+  params: { window?: number; granularity?: string }
+): Promise<CashSheetSyncBridgeResponse> {
+  const u = new URL(url(`/api/apps/${encodeURIComponent(appId)}/cash-sheet-sync`), window.location.origin);
+  if (params.window) u.searchParams.set("window", String(params.window));
+  if (params.granularity) u.searchParams.set("granularity", params.granularity);
+  const res = await fetch(u.toString());
+  if (!res.ok) throw new Error(`/cash-sheet-sync ${res.status}`);
+  return (await res.json()) as CashSheetSyncBridgeResponse;
 }
 
 // The redesigned QBO Hub pages share ONE ongoing AI Report Assistant

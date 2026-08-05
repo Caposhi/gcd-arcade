@@ -23,6 +23,7 @@ import {
   proxyQboAssistantGet,
   proxyQboAssistantSend,
   proxyQboReporting,
+  proxyQboCashSheetSync,
 } from "./proxy.js";
 
 const PORT = Number(process.env.PORT) || 8787;
@@ -180,6 +181,21 @@ app.post("/api/apps/:id/reporting", async (req, res) => {
     if (typeof v === "string") query[k] = v;
   }
   await proxyQboReporting(entry, query, res, "POST");
+});
+
+// GCD QBO Hub's redesigned Cash Sheet Sync page — snapshot, trend, exceptions
+// queue, recent edits, payee leaderboard, and GCD Pal insights.
+app.get("/api/apps/:id/cash-sheet-sync", async (req, res) => {
+  const entry = getReadyEntry(req.params.id);
+  if (!entry) {
+    res.status(404).json({ error: "unknown_or_offline_app", app: req.params.id });
+    return;
+  }
+  const query: Record<string, string> = {};
+  for (const [k, v] of Object.entries(req.query)) {
+    if (typeof v === "string") query[k] = v;
+  }
+  await proxyQboCashSheetSync(entry, query, res);
 });
 
 // GCD QBO Hub's shared AI Report Assistant conversation — one ongoing thread
