@@ -4,6 +4,7 @@ import type { ConsoleState, Tile } from "@gcd-arcade/shared";
 import { LiveView } from "./LiveView";
 import { ProjectionsView } from "./qbo/ProjectionsView";
 import { CashSheetSyncView } from "./qbo/CashSheetSyncView";
+import { AssistantView } from "./qbo/AssistantView";
 import { AppIcon } from "../lib/icons";
 import { fetchState } from "../lib/bff";
 import { summarizeBadge } from "../lib/badges";
@@ -17,6 +18,8 @@ function ChildBody({ tile }: { tile: Tile }) {
       return <ProjectionsView tile={tile} />;
     case "cash-sheet-sync":
       return <CashSheetSyncView tile={tile} />;
+    case "assistant":
+      return <AssistantView tile={tile} />;
     default:
       return <LiveView tile={tile} />;
   }

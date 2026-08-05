@@ -1004,6 +1004,18 @@ body {
   margin-bottom: 14px;
   padding-right: 4px;
 }
+/* Modifier for a chat-log (or conversation list) that should fill the rest
+   of a bounded flex-column panel and scroll internally, instead of the
+   compact bottom `AiChatPanel`'s fixed 320px cap — used by AssistantView's
+   full-page sidebar + chat. Kept as a class (not an inline style) so the
+   mobile override below can actually win: an inline style always beats a
+   stylesheet rule regardless of media query/specificity. */
+.assistant-fill {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+}
 .chat-msg {
   border-radius: var(--radius-lg);
   padding: 9px 13px;
@@ -1218,5 +1230,23 @@ body {
      the title + icon alone are still enough context on a phone. */
   .view-header .tag {
     display: none;
+  }
+  /* AssistantView keeps the default two-column .view-body grid (sidebar +
+     chat) on desktop, where each panel gets a definite stretched height and
+     `.chat-log`'s `flex:1` correctly fills the remainder. At this
+     breakpoint the grid collapses to one column and each panel becomes its
+     own intrinsically-sized ("auto") grid row — and a flex item with
+     `overflow:auto` contributes ~0 to that auto-sizing pass (its automatic
+     minimum size is defined as zero), so the panel undersizes itself and
+     `.chat-log` clips/scrolls its own content even though the page has
+     plenty of room. Rather than fight that, scroll the whole page here
+     instead, same as every other bespoke QBO Hub page at phone width. */
+  .qbo-assistant-body {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .qbo-assistant-body .assistant-fill {
+    flex: none;
+    overflow: visible;
   }
 }
