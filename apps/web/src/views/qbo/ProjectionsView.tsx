@@ -284,13 +284,25 @@ function CategoryPanel({ title, items }: { title: string; items: CategoryDatum[]
             {r.name}
           </span>
           <span className="bar-track">
-            <i style={{ width: `${Math.max(3, (Math.abs(r.value) / max) * 100)}%` }} />
+            <BarFill value={r.value} max={max} />
           </span>
-          <span className="stage-value">{money(r.value, true)}</span>
+          <span className="stage-value" style={r.value < 0 ? { color: "var(--text-muted)" } : undefined}>
+            {money(r.value, true)}
+          </span>
         </div>
       ))}
     </div>
   );
+}
+
+/** A funnel-row bar that only fills for a positive amount. A negative value
+ *  (a credit/overpayment sitting in what's normally an "owed" bucket) drawn
+ *  as a normal full-width bar reads as "a large amount owed" — exactly
+ *  backwards — so it renders as an empty track instead; the muted, signed
+ *  figure alone conveys it. */
+function BarFill({ value, max }: { value: number; max: number }) {
+  if (value < 0) return <i style={{ width: "3%", background: "var(--gray-300)" }} />;
+  return <i style={{ width: `${Math.max(3, (value / max) * 100)}%` }} />;
 }
 
 function AgingPanel({ title, aging, entityLabel }: { title: string; aging: AgingNormalized; entityLabel: string }) {
@@ -310,15 +322,20 @@ function AgingPanel({ title, aging, entityLabel }: { title: string; aging: Aging
       <div className="empty" style={{ padding: "0 0 10px", textAlign: "left" }}>
         Total {money(aging.total, true)}
       </div>
-      {aging.bucketLabels.map((label, i) => (
-        <div className="funnel-row" key={label}>
-          <span className="stage">{label}</span>
-          <span className="bar-track">
-            <i style={{ width: `${Math.max(3, (Math.abs(aging.totals[i] ?? 0) / max) * 100)}%` }} />
-          </span>
-          <span className="stage-value">{money(aging.totals[i] ?? 0, true)}</span>
-        </div>
-      ))}
+      {aging.bucketLabels.map((label, i) => {
+        const v = aging.totals[i] ?? 0;
+        return (
+          <div className="funnel-row" key={label}>
+            <span className="stage">{label}</span>
+            <span className="bar-track">
+              <BarFill value={v} max={max} />
+            </span>
+            <span className="stage-value" style={v < 0 ? { color: "var(--text-muted)" } : undefined}>
+              {money(v, true)}
+            </span>
+          </div>
+        );
+      })}
       {topRows.length > 0 && (
         <>
           <h3 style={{ marginTop: 16 }}>Largest {entityLabel}s</h3>
