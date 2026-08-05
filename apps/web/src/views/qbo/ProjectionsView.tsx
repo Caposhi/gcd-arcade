@@ -1,27 +1,28 @@
 /**
  * GCD QBO Hub — Financial Projections, redesigned (§ QBO Hub redesign,
  * phase 1 of 3). Same visual language as Call Transcripts/Attribution
- * (panel / stat-card / funnel-row bars, no bespoke chrome) — replaces the
- * generic live-view fallback with the actual reporting data the hub's own
+ * (panel / stat-card layout, no bespoke chrome) — replaces the generic
+ * live-view fallback with the actual reporting data the hub's own
  * /projections Reporting tab already computes: KPI tiles with period-over-
  * period deltas, a revenue/net-income trend, expense/customer/item
  * breakdowns, A/R & A/P aging, GCD Pal's deterministic insight bullets, and
  * the shared AI Report Assistant panel at the bottom.
  *
- * Charts are hand-rolled divs (funnel-row bars, a small trend mini-chart) to
- * match how every other world here renders data — no new chart library.
+ * Charts (Charts.tsx) are real Recharts, matching the hub's own page —
+ * axis scales, a legend, hover tooltips, click-to-drill, and true diverging
+ * bars for a negative value, not a simplified hand-rolled stand-in.
  */
 import { useEffect, useState } from "react";
+import { RefreshCw } from "lucide-react";
 import type { Tile } from "@gcd-arcade/shared";
-import { fetchQboReporting } from "../../lib/bff";
+import { fetchQboReporting, refreshQboReporting } from "../../lib/bff";
 import { AiChatPanel } from "./AiChatPanel";
+import { TrendChart, CategoryChart, AgingChart } from "./Charts";
 import { money, formatKpiValue, formatDelta, fmtWhen } from "./format";
 import type {
   ReportingBridgeResponse,
   Kpi,
-  CategoryDatum,
   AgingNormalized,
-  TrendPoint,
   PalInsight,
   RangePreset,
   ComparisonMode,
@@ -51,6 +52,7 @@ export function ProjectionsView({ tile }: { tile: Tile }) {
   const [data, setData] = useState<ReportingBridgeResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [seed, setSeed] = useState<{ text: string; nonce: number } | undefined>(undefined);
 
   useEffect(() => {
@@ -70,12 +72,21 @@ export function ProjectionsView({ tile }: { tile: Tile }) {
 
   const askAbout = (prompt: string) => setSeed((prev) => ({ text: prompt, nonce: (prev?.nonce ?? 0) + 1 }));
 
+  function refresh() {
+    setRefreshing(true);
+    setError(null);
+    refreshQboReporting(tile.appId, filters)
+      .then(setData)
+      .catch((err) => setError(String(err)))
+      .finally(() => setRefreshing(false));
+  }
+
   const reporting = data?.reporting;
 
   return (
     <div className="view-body" style={{ gridTemplateColumns: "1fr", overflowY: "auto", overflowX: "hidden" }}>
       <div>
-        <FilterBar filters={filters} onChange={setFilters} />
+        <FilterBar filters={filters} onChange={setFilters} onRefresh={refresh} refreshing={refreshing} />
 
         {data && data.insights.length > 0 && <InsightsStrip insights={data.insights} onAsk={askAbout} />}
 
@@ -115,9 +126,18 @@ export function ProjectionsView({ tile }: { tile: Tile }) {
             </div>
 
             <div className="panel-grid" style={{ marginBottom: 24 }}>
-              <CategoryPanel title="Revenue by Service / Product" items={reporting.revenueByItem} />
-              <CategoryPanel title="Revenue by Customer" items={reporting.revenueByCustomer} />
-              <CategoryPanel title="Operating Expenses" items={reporting.expenseBreakdown} />
+              <div className="panel">
+                <h3>Revenue by Service / Product</h3>
+                <CategoryChart items={reporting.revenueByItem} unit="revenue" />
+              </div>
+              <div className="panel">
+                <h3>Revenue by Customer</h3>
+                <CategoryChart items={reporting.revenueByCustomer} unit="revenue" />
+              </div>
+              <div className="panel">
+                <h3>Operating Expenses</h3>
+                <CategoryChart items={reporting.expenseBreakdown} unit="expenses" />
+              </div>
             </div>
 
             <div className="two-col" style={{ marginBottom: 24 }}>
@@ -149,9 +169,23 @@ export function ProjectionsView({ tile }: { tile: Tile }) {
 
 // -------------------------------- filter bar ---------------------------------
 
-function FilterBar({ filters, onChange }: { filters: Filters; onChange: (f: Filters) => void }) {
+function FilterBar({
+  filters,
+  onChange,
+  onRefresh,
+  refreshing,
+}: {
+  filters: Filters;
+  onChange: (f: Filters) => void;
+  onRefresh: () => void;
+  refreshing: boolean;
+}) {
   return (
-    <div className="panel" style={{ marginBottom: 24, display: "flex", flexWrap: "wrap", gap: 14, alignItems: "center" }}>
+    <div
+      className="panel"
+      style={{ marginBottom: 24, display: "flex", flexWrap: "wrap", gap: 14, alignItems: "center", justifyContent: "space-between" }}
+    >
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 14, alignItems: "center" }}>
       <label className="field-row" style={{ margin: 0, gap: 6, alignItems: "center" }}>
         <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Range</span>
         <select
@@ -200,6 +234,11 @@ function FilterBar({ filters, onChange }: { filters: Filters; onChange: (f: Filt
           <option value="year">Year</option>
         </select>
       </label>
+      </div>
+      <button className="btn" onClick={onRefresh} disabled={refreshing}>
+        <RefreshCw size={15} aria-hidden style={refreshing ? { animation: "spin 1s linear infinite" } : undefined} />{" "}
+        {refreshing ? "Refreshing…" : "Refresh from QuickBooks"}
+      </button>
     </div>
   );
 }
@@ -245,65 +284,10 @@ function KpiTile({ kpi }: { kpi: Kpi }) {
   );
 }
 
-// -------------------------------- trend chart ---------------------------------
-
-function TrendChart({ trend }: { trend: TrendPoint[] }) {
-  if (trend.length === 0) return <div className="empty">No trend data for this range.</div>;
-  const max = Math.max(1, ...trend.map((t) => Math.abs(t.revenue)));
-  return (
-    <div className="trend-chart">
-      {trend.map((t) => (
-        <div className="trend-col" key={t.period} title={`${t.period}: revenue ${money(t.revenue, true)}, net income ${money(t.netIncome, true)}`}>
-          <div className={`trend-net ${t.netIncome >= 0 ? "good" : "bad"}`}>{money(t.netIncome, true)}</div>
-          <div className="trend-bar" style={{ height: `${Math.max(2, (Math.abs(t.revenue) / max) * 100)}%` }} />
-          <div className="trend-period">{t.period}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ----------------------------- category breakdowns ----------------------------
-
-function CategoryPanel({ title, items }: { title: string; items: CategoryDatum[] }) {
-  if (items.length === 0) {
-    return (
-      <div className="panel">
-        <h3>{title}</h3>
-        <div className="empty">No data for this range.</div>
-      </div>
-    );
-  }
-  const max = Math.max(1, ...items.map((r) => Math.abs(r.value)));
-  return (
-    <div className="panel">
-      <h3>{title}</h3>
-      {items.map((r) => (
-        <div className="funnel-row" key={r.name}>
-          <span className="stage" style={{ width: 130, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.name}>
-            {r.name}
-          </span>
-          <span className="bar-track">
-            <BarFill value={r.value} max={max} />
-          </span>
-          <span className="stage-value" style={r.value < 0 ? { color: "var(--text-muted)" } : undefined}>
-            {money(r.value, true)}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/** A funnel-row bar that only fills for a positive amount. A negative value
- *  (a credit/overpayment sitting in what's normally an "owed" bucket) drawn
- *  as a normal full-width bar reads as "a large amount owed" — exactly
- *  backwards — so it renders as an empty track instead; the muted, signed
- *  figure alone conveys it. */
-function BarFill({ value, max }: { value: number; max: number }) {
-  if (value < 0) return <i style={{ width: "3%", background: "var(--gray-300)" }} />;
-  return <i style={{ width: `${Math.max(3, (value / max) * 100)}%` }} />;
-}
+// ----------------------------- aging panel wrapper -----------------------------
+// AgingChart (Charts.tsx) is the pure chart; the "Total" caption and the
+// always-visible "Largest X" list (regardless of which bucket is selected)
+// are page-level composition, same split as CategoryChart above.
 
 function AgingPanel({ title, aging, entityLabel }: { title: string; aging: AgingNormalized; entityLabel: string }) {
   if (aging.total === 0) {
@@ -314,28 +298,14 @@ function AgingPanel({ title, aging, entityLabel }: { title: string; aging: Aging
       </div>
     );
   }
-  const max = Math.max(1, ...aging.totals.map((v) => Math.abs(v)));
   const topRows = [...aging.rows].sort((a, b) => b.total - a.total).slice(0, 5);
   return (
     <div className="panel">
       <h3>{title}</h3>
-      <div className="empty" style={{ padding: "0 0 10px", textAlign: "left" }}>
-        Total {money(aging.total, true)}
+      <div className="empty" style={{ padding: "0 0 6px", textAlign: "left", fontSize: 12 }}>
+        Total {money(aging.total, true)} · click a bucket to drill in
       </div>
-      {aging.bucketLabels.map((label, i) => {
-        const v = aging.totals[i] ?? 0;
-        return (
-          <div className="funnel-row" key={label}>
-            <span className="stage">{label}</span>
-            <span className="bar-track">
-              <BarFill value={v} max={max} />
-            </span>
-            <span className="stage-value" style={v < 0 ? { color: "var(--text-muted)" } : undefined}>
-              {money(v, true)}
-            </span>
-          </div>
-        );
-      })}
+      <AgingChart aging={aging} entityLabel={entityLabel} />
       {topRows.length > 0 && (
         <>
           <h3 style={{ marginTop: 16 }}>Largest {entityLabel}s</h3>
@@ -350,3 +320,4 @@ function AgingPanel({ title, aging, entityLabel }: { title: string; aging: Aging
     </div>
   );
 }
+

@@ -164,6 +164,24 @@ app.get("/api/apps/:id/reporting", async (req, res) => {
   await proxyQboReporting(entry, query, res);
 });
 
+// "Refresh from QuickBooks" — forces a live QBO refetch on the hub side.
+// No per-user role check happens here: the Arcade has no login of its own,
+// so unlike the hub's own owner_admin/reviewer-gated button, this is open to
+// anyone who can reach the Arcade at all — already the intended trust
+// boundary (ownership/management only).
+app.post("/api/apps/:id/reporting", async (req, res) => {
+  const entry = getReadyEntry(req.params.id);
+  if (!entry) {
+    res.status(404).json({ error: "unknown_or_offline_app", app: req.params.id });
+    return;
+  }
+  const query: Record<string, string> = {};
+  for (const [k, v] of Object.entries(req.query)) {
+    if (typeof v === "string") query[k] = v;
+  }
+  await proxyQboReporting(entry, query, res, "POST");
+});
+
 // GCD QBO Hub's shared AI Report Assistant conversation — one ongoing thread
 // reachable from every redesigned QBO Hub page, with history of past threads.
 // See proxy.ts for why this is a plain JSON bridge (not SSE) with its own

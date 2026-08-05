@@ -158,13 +158,20 @@ export async function proxyTranscriptsGet(
 
 const QBO_HUB_BRIDGE_TIMEOUT_MS = 110_000;
 
-/** GET /api/apps/:id/reporting?<filters> → proxies gcd-qbo-hub's Financial
- *  Projections reporting bridge (KPIs, charts, aging, GCD Pal insights). A
- *  plain, allow-listed query passthrough since every param is a known
- *  filter name. */
+/** GET/POST /api/apps/:id/reporting?<filters> → proxies gcd-qbo-hub's
+ *  Financial Projections reporting bridge (KPIs, charts, aging, GCD Pal
+ *  insights). A plain, allow-listed query passthrough since every param is
+ *  a known filter name. GET reads through the cache; POST ("Refresh from
+ *  QuickBooks") forces a live QBO refetch on the hub side — same forwarding,
+ *  just a different HTTP method, since the hub's route branches on it. */
 const REPORTING_ALLOWED_PARAMS = new Set(["preset", "comparison", "method", "granularity", "start", "end"]);
 
-export async function proxyQboReporting(entry: AppEntry, query: Record<string, string>, res: Response): Promise<void> {
+export async function proxyQboReporting(
+  entry: AppEntry,
+  query: Record<string, string>,
+  res: Response,
+  httpMethod: "GET" | "POST" = "GET"
+): Promise<void> {
   if (!entry.baseUrl || !entry.bearerSecret) {
     res.status(404).json({ error: "not_available" });
     return;
@@ -178,6 +185,7 @@ export async function proxyQboReporting(entry: AppEntry, query: Record<string, s
   const timer = setTimeout(() => ctrl.abort(), QBO_HUB_BRIDGE_TIMEOUT_MS);
   try {
     const upstream = await fetch(url.toString(), {
+      method: httpMethod,
       headers: { accept: "application/json", authorization: `Bearer ${entry.bearerSecret}` },
       signal: ctrl.signal,
     });
