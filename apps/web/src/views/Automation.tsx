@@ -17,11 +17,19 @@ import { summarizeBadge } from "../lib/badges";
 export function Automation({ tile }: { tile: Tile }) {
   const [open, setOpen] = useState<Tile | null>(null);
   const [state, setState] = useState<ConsoleState | undefined>();
+  const [stateFailed, setStateFailed] = useState(false);
   const children = tile.children ?? [];
 
   useEffect(() => {
     let alive = true;
-    const load = () => fetchState(tile.appId).then((s) => alive && setState(s)).catch(() => {});
+    const load = () =>
+      fetchState(tile.appId)
+        .then((s) => {
+          if (!alive) return;
+          setState(s);
+          setStateFailed(false);
+        })
+        .catch(() => alive && setStateFailed(true));
     load();
     const t = setInterval(load, 15000);
     return () => {
@@ -58,7 +66,7 @@ export function Automation({ tile }: { tile: Tile }) {
                   <AppIcon tileId={c.id} />
                 </div>
                 <div className="nm">{c.name}</div>
-                <div className="badge">{summarizeBadge(c, state)}</div>
+                <div className="badge">{summarizeBadge(c, state, stateFailed)}</div>
               </div>
             ))}
           </div>

@@ -30,14 +30,6 @@ export async function proxyStream(entry: AppEntry, req: Request, res: Response):
   if (typeof req.query.program === "string") extra.program = req.query.program;
   const upstreamUrl = consoleUrl(entry, "/console/stream", extra);
 
-  res.writeHead(200, {
-    "content-type": "text/event-stream",
-    "cache-control": "no-cache, no-transform",
-    connection: "keep-alive",
-    "x-accel-buffering": "no", // disable proxy buffering (nginx/Render)
-  });
-  res.write(": connected\n\n");
-
   const ctrl = new AbortController();
   let closed = false;
   const cleanup = () => {
@@ -47,20 +39,42 @@ export async function proxyStream(entry: AppEntry, req: Request, res: Response):
   };
   req.on("close", cleanup);
 
+  // Connect upstream BEFORE committing to any response — writing the 200
+  // SSE headers first (then discovering upstream is down) told the client
+  // every reconnect attempt "succeeded" and immediately ended, which reset
+  // its failure counter every time and left it stuck retrying forever
+  // instead of ever reaching useStream's "consistently failing → offline"
+  // threshold. A real non-2xx response here lets that counter actually
+  // accumulate across genuine failures.
+  let upstream: globalThis.Response;
+  try {
+    upstream = await fetch(upstreamUrl, {
+      headers: { accept: "text/event-stream", ...consoleHeaders(entry) },
+      signal: ctrl.signal,
+    });
+  } catch (err) {
+    if (!res.headersSent) res.status(502).json({ error: "upstream_unreachable", app: entry.id, message: String(err) });
+    return;
+  }
+  if (!upstream.ok || !upstream.body) {
+    if (!res.headersSent) res.status(upstream.status || 502).json({ error: "upstream_error", app: entry.id, status: upstream.status });
+    return;
+  }
+
+  res.writeHead(200, {
+    "content-type": "text/event-stream",
+    "cache-control": "no-cache, no-transform",
+    connection: "keep-alive",
+    "x-accel-buffering": "no", // disable proxy buffering (nginx/Render)
+  });
+  res.write(": connected\n\n");
+
   // Keep the downstream connection warm even if upstream is quiet.
   const ping = setInterval(() => {
     if (!closed) res.write(": ping\n\n");
   }, 20000);
 
   try {
-    const upstream = await fetch(upstreamUrl, {
-      headers: { accept: "text/event-stream", ...consoleHeaders(entry) },
-      signal: ctrl.signal,
-    });
-    if (!upstream.ok || !upstream.body) {
-      res.write(`event: console:error\ndata: ${JSON.stringify({ app: entry.id, status: upstream.status })}\n\n`);
-      return;
-    }
     const reader = upstream.body.getReader();
     const decoder = new TextDecoder();
     while (!closed) {
@@ -68,10 +82,9 @@ export async function proxyStream(entry: AppEntry, req: Request, res: Response):
       if (done) break;
       if (value) res.write(decoder.decode(value, { stream: true }));
     }
-  } catch (err) {
-    if (!closed) {
-      res.write(`event: console:error\ndata: ${JSON.stringify({ app: entry.id, message: String(err) })}\n\n`);
-    }
+  } catch {
+    // Connection dropped mid-stream — let the client's reconnect/status
+    // logic handle it rather than injecting a fake event.
   } finally {
     clearInterval(ping);
     cleanup();
