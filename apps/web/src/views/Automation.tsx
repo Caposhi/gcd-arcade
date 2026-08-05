@@ -53,7 +53,7 @@ export function Automation({ tile }: { tile: Tile }) {
 
   if (open) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 28px" }}>
           <button className="iconbtn" title="All programs" onClick={() => setOpen(null)}>
             <ChevronLeft />

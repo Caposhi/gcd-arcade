@@ -791,6 +791,15 @@ body {
     transform: translateX(250%);
   }
 }
+/* Generic spin (e.g. the "Refresh from QuickBooks" icon while in flight). */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
 .boot .caption {
   margin-top: 16px;
   font-size: 13px;

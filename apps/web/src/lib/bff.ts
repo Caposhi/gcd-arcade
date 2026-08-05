@@ -82,6 +82,22 @@ export async function fetchQboReporting(
   return (await res.json()) as ReportingBridgeResponse;
 }
 
+/** POST /api/apps/:id/reporting?<filters> — "Refresh from QuickBooks": forces
+ *  a live QBO refetch on the hub side (bypassing its cache) instead of the
+ *  normal fetch-through-cache GET. Same response shape. */
+export async function refreshQboReporting(
+  appId: string,
+  filters: Partial<Record<"preset" | "comparison" | "method" | "granularity" | "start" | "end", string>>
+): Promise<ReportingBridgeResponse> {
+  const u = new URL(url(`/api/apps/${encodeURIComponent(appId)}/reporting`), window.location.origin);
+  for (const [k, v] of Object.entries(filters)) {
+    if (v) u.searchParams.set(k, v);
+  }
+  const res = await fetch(u.toString(), { method: "POST" });
+  if (!res.ok) throw new Error(`/reporting refresh ${res.status}`);
+  return (await res.json()) as ReportingBridgeResponse;
+}
+
 // The redesigned QBO Hub pages share ONE ongoing AI Report Assistant
 // conversation across all of them (per the redesign brief), with a history
 // of past threads — bridged through gcd-qbo-hub's /api/external/assistant
