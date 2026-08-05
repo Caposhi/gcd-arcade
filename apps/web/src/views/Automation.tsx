@@ -3,6 +3,7 @@ import { ChevronLeft } from "lucide-react";
 import type { ConsoleState, Tile } from "@gcd-arcade/shared";
 import { LiveView } from "./LiveView";
 import { ProjectionsView } from "./qbo/ProjectionsView";
+import { CashSheetSyncView } from "./qbo/CashSheetSyncView";
 import { AppIcon } from "../lib/icons";
 import { fetchState } from "../lib/bff";
 import { summarizeBadge } from "../lib/badges";
@@ -14,6 +15,8 @@ function ChildBody({ tile }: { tile: Tile }) {
   switch (tile.view) {
     case "projections":
       return <ProjectionsView tile={tile} />;
+    case "cash-sheet-sync":
+      return <CashSheetSyncView tile={tile} />;
     default:
       return <LiveView tile={tile} />;
   }

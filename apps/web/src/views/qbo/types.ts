@@ -118,3 +118,86 @@ export type RangePreset = "this_month" | "last_month" | "this_quarter" | "ytd" |
 export type ComparisonMode = "prior_period" | "prior_year";
 export type AccountingMethodDto = "accrual" | "cash";
 export type GranularityDto = "month" | "quarter" | "year";
+
+// --------------------------- Cash Sheet Sync bridge ---------------------------
+// Mirrors gcd-qbo-hub's src/app/api/external/cash-sheet-sync/route.ts.
+
+export interface CssLastRun {
+  startedAt: string;
+  mode: string;
+  status: string;
+  rowsScanned: number;
+  rowsPosted: number;
+  rowsSkipped: number;
+  rowsError: number;
+  rowsWarning: number;
+  tabsScanned: string[];
+}
+
+export interface CssAttention {
+  possibleDuplicates: number;
+  duplicateRowIds: number;
+  unknownPurpose: number;
+  missingAccountMapping: number;
+  missingPayeeMapping: number;
+  changedAfterPosting: number;
+  removedAfterPosting: number;
+  auditOnly: number;
+  awaitingQboMatch: number;
+  error: number;
+}
+
+export interface CssSnapshot {
+  rolloutStage: string;
+  environment: string;
+  lastRun: CssLastRun | null;
+  attention: CssAttention;
+}
+
+export interface CssTrendPoint {
+  period: string;
+  rowsPosted: number;
+  volumePosted: number;
+  rowsError: number;
+  rowsDuplicate: number;
+}
+
+export interface CssException {
+  id: string;
+  tab: string;
+  row: number;
+  status: string;
+  date: string | null;
+  name: string | null;
+  purpose: string | null;
+  amount: number;
+  url: string | null;
+}
+
+export interface CssRecentEdit {
+  id: string;
+  when: string;
+  tab: string | null;
+  row: number | null;
+  url: string | null;
+  fields: string[];
+  message: string | null;
+}
+
+export interface CssPayee {
+  name: string;
+  amount: number;
+  count: number;
+}
+
+export interface CashSheetSyncBridgeResponse {
+  snapshot: CssSnapshot;
+  trend: CssTrendPoint[];
+  exceptions: CssException[];
+  recentEdits: CssRecentEdit[];
+  payeeLeaderboard: CssPayee[];
+  insights: PalInsight[];
+}
+
+export type CssWindowDays = 30 | 90 | 365;
+export type CssGranularity = "week" | "month" | "year";

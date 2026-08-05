@@ -215,6 +215,7 @@ function buildWebhookTiles(entry: AppEntry, fetched: ConsoleManifest | null): Ti
  *  generic themed live view until its turn comes. */
 const QBO_HUB_BESPOKE_VIEW: Record<string, ViewKind> = {
   projections: "projections",
+  "cash-sheet-sync": "cash-sheet-sync",
 };
 
 /** GCD QBO Hub: one grouping tile whose children are the hub's modules. Each

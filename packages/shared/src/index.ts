@@ -84,6 +84,7 @@ export type ViewKind =
   | "sms-inbox"
   | "automation"
   | "projections" // GCD QBO Hub: Financial Projections' bespoke world
+  | "cash-sheet-sync" // GCD QBO Hub: Cash Sheet Sync's bespoke world
   | "live" // generic themed live-summary view (foundation default)
   | "placeholder";
 

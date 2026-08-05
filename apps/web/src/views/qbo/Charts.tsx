@@ -19,7 +19,7 @@ import {
   Legend,
   Cell,
 } from "recharts";
-import type { TrendPoint, CategoryDatum, AgingNormalized } from "./types";
+import type { TrendPoint, CategoryDatum, AgingNormalized, CssTrendPoint } from "./types";
 import { money, percent } from "./format";
 import { CHART, axisProps, gridProps, barCursor, GcdTooltip } from "./chart-theme";
 
@@ -152,5 +152,43 @@ export function AgingChart({ aging, entityLabel }: { aging: AgingNormalized; ent
         </div>
       )}
     </>
+  );
+}
+
+// ------------------------------ Cash Sheet Sync -------------------------------
+
+/** $ volume posted per period — one series, money axis. */
+export function CssVolumeChart({ trend }: { trend: CssTrendPoint[] }) {
+  if (trend.length === 0) return <EmptyNote label="volume data" />;
+  return (
+    <ResponsiveContainer width="100%" height={220}>
+      <BarChart data={trend} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
+        <CartesianGrid {...gridProps} />
+        <XAxis dataKey="period" {...axisProps} />
+        <YAxis {...axisProps} tickFormatter={(v: number) => money(v, true)} width={64} />
+        <Tooltip content={<GcdTooltip fmt={(n) => money(n)} />} cursor={barCursor} />
+        <Bar dataKey="volumePosted" name="Volume posted" fill={CHART.revenue} radius={[6, 6, 0, 0]} maxBarSize={44} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+/** Rows posted vs. errors/duplicates per period — one shared count axis
+ *  (all three are counts, not dollars, so no dual-axis issue). */
+export function CssActivityChart({ trend }: { trend: CssTrendPoint[] }) {
+  if (trend.length === 0) return <EmptyNote label="activity data" />;
+  return (
+    <ResponsiveContainer width="100%" height={220}>
+      <ComposedChart data={trend} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
+        <CartesianGrid {...gridProps} />
+        <XAxis dataKey="period" {...axisProps} />
+        <YAxis {...axisProps} allowDecimals={false} width={40} />
+        <Tooltip content={<GcdTooltip fmt={(n) => String(Math.round(n))} />} cursor={barCursor} />
+        <Legend wrapperStyle={{ fontSize: 12, color: "var(--text-muted)" }} />
+        <Bar dataKey="rowsPosted" name="Rows posted" fill={CHART.bar} radius={[6, 6, 0, 0]} maxBarSize={36} />
+        <Line dataKey="rowsError" name="Errors" type="monotone" stroke="var(--danger)" strokeWidth={2} dot={{ r: 3 }} />
+        <Line dataKey="rowsDuplicate" name="Duplicates" type="monotone" stroke={CHART.expense} strokeWidth={2} dot={{ r: 3 }} />
+      </ComposedChart>
+    </ResponsiveContainer>
   );
 }
