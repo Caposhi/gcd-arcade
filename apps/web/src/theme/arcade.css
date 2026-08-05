@@ -53,6 +53,11 @@ body,
 #root {
   height: 100%;
   margin: 0;
+  /* Hard backstop: nothing on any page should ever cause the page itself to
+     scroll sideways. Individual "bricks" (a data table, the post-card
+     carousel) opt back into horizontal scroll deliberately via their own
+     overflow-x — this only blocks it from leaking out to the page level. */
+  overflow-x: hidden;
 }
 
 body {
@@ -142,7 +147,11 @@ body {
 }
 .launcher-grid {
   display: grid;
-  grid-template-columns: repeat(5, 128px);
+  /* auto-fit (not a hardcoded repeat(5, ...)) so this actually reflows to
+     fewer columns on a narrow screen instead of forcing a ~784px-wide grid
+     that a phone would have to scroll sideways to see the rest of. */
+  grid-template-columns: repeat(auto-fit, 128px);
+  justify-content: center;
   gap: 44px 36px;
 }
 .tile {
@@ -247,17 +256,30 @@ body {
   height: 22px;
   color: var(--royal-blue);
 }
+/* The only flexible-width thing in this row — everything else (icon, clock,
+   buttons) is fixed/intrinsic size, so this is what must shrink+truncate
+   rather than push the header wider than the screen. */
+.view-title {
+  min-width: 0;
+  overflow: hidden;
+}
 .view-header h1 {
   margin: 0;
   font-family: var(--font-heading);
   font-weight: 700;
   font-size: 17px;
   color: var(--text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .view-header .tag {
   color: var(--text-muted);
   font-size: 12px;
   margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .view-header .spacer {
   flex: 1;
@@ -342,6 +364,15 @@ body {
   overflow: hidden;
   min-height: 0;
 }
+/* Same min-width:auto grid gotcha as .panel, one level up: several worlds
+   (Agents/Attribution/Transcripts) wrap everything in a single plain <div>
+   as .view-body's one grid column, rather than a .panel directly — that
+   wrapper needs the same protection, or unwrapped content inside it (e.g.
+   the post-card carousel's flex row) inflates it, and the page, instead of
+   just scrolling internally like it's supposed to. */
+.view-body > * {
+  min-width: 0;
+}
 .panel {
   background: var(--white);
   border: 1px solid var(--border-subtle);
@@ -350,6 +381,15 @@ body {
   padding: 20px;
   overflow: auto;
   min-height: 0;
+  /* Grid/flex items default to min-width:auto, which lets any unwrapped
+     content inside (a long line of text, a row of chips with flex-wrap)
+     force this panel — and the whole grid track it sits in — wider than
+     its column, blowing out the page's width. Every module on every page
+     is a .panel, so this one rule is the actual fix for "modules shouldn't
+     scroll sideways": it makes the panel actually respect the width its
+     grid track gives it, so wrapping/ellipsis/scrolling inside it works
+     the way each element already declares. */
+  min-width: 0;
 }
 .panel h3 {
   margin: 0 0 8px;
@@ -459,6 +499,7 @@ body {
   cursor: pointer;
   text-align: center;
   transition: transform var(--dur-base) var(--ease-standard);
+  min-width: 0;
 }
 .subcard:hover {
   transform: translateY(-2px);
@@ -505,17 +546,24 @@ body {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   padding: 18px;
+  min-width: 0;
 }
 .stat-card .lbl {
   font-size: 12px;
   color: var(--text-muted);
   margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .stat-card .val {
   font-size: 26px;
   font-weight: 700;
   color: var(--text-strong);
   font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .stat-card .val.accent {
   color: var(--royal-blue);
@@ -1031,4 +1079,42 @@ body {
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+
+/* ------------------------------- mobile -------------------------------------
+   Everything above is already fairly reflow-friendly (auto-fit grids,
+   min(px,100%) widths) — the exceptions are the fixed-column layouts below,
+   which need an explicit collapse to one column on a phone-width screen. */
+@media (max-width: 640px) {
+  .topbar {
+    padding: 14px 18px;
+  }
+  .view-header {
+    padding: 12px 16px;
+    gap: 10px;
+  }
+  .view-body {
+    grid-template-columns: 1fr;
+    padding: 16px;
+    gap: 16px;
+  }
+  .two-col {
+    grid-template-columns: 1fr;
+  }
+  .panel-grid {
+    grid-template-columns: 1fr;
+  }
+  /* A select + button alongside the search input get too cramped to be
+     usable at phone width — let the row wrap instead of squeezing. */
+  .field-row {
+    flex-wrap: wrap;
+  }
+  .field-row .text-input {
+    flex-basis: 100%;
+  }
+  /* The tagline is the first thing worth dropping when space is tight —
+     the title + icon alone are still enough context on a phone. */
+  .view-header .tag {
+    display: none;
+  }
 }

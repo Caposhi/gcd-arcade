@@ -32,7 +32,7 @@ export function ViewHost({ tile, onBack, onOpenSettings }: { tile: Tile; onBack:
         <span className="vicon">
           <AppIcon tileId={tile.id} />
         </span>
-        <div>
+        <div className="view-title">
           <h1>{tile.name}</h1>
           {tile.tagline && <div className="tag">{tile.tagline}</div>}
         </div>

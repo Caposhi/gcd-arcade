@@ -154,7 +154,7 @@ export function TranscriptsView({ tile }: { tile: Tile }) {
   useEffect(loadSummary, [tile.appId]);
 
   return (
-    <div className="view-body" style={{ gridTemplateColumns: "1fr", overflow: "auto" }}>
+    <div className="view-body" style={{ gridTemplateColumns: "1fr", overflowY: "auto", overflowX: "hidden" }}>
       <div>
         <HealthStrip health={health} status={status} activity={activity} />
 
@@ -240,7 +240,7 @@ function HealthStrip({ health, status, activity }: { health: Health; status: str
         <div className="lbl">
           <span className={`statusdot ${status}`} /> Sync
         </div>
-        <div className="val muted" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div className="val muted">
           {lastActivity ? lastActivity.text : health.lastSyncedAt ? `synced ${fmtWhen(health.lastSyncedAt)}` : "waiting for first sync…"}
         </div>
       </div>

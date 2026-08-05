@@ -54,7 +54,7 @@ export function AgentsView({ tile }: { tile: Tile }) {
   }, [events]);
 
   return (
-    <div className="view-body" style={{ gridTemplateColumns: "1fr", overflow: "auto" }}>
+    <div className="view-body" style={{ gridTemplateColumns: "1fr", overflowY: "auto", overflowX: "hidden" }}>
       <div>
         <StatRow office={office} />
         <TeamList office={office} />
