@@ -1090,6 +1090,90 @@ body {
   color: var(--text-muted);
 }
 
+/* --------------------------- Financial Projections world ---------------------
+   Reuses funnel-row (category/aging bars), stat-card (KPI tiles), kpi-row,
+   and dot from Attribution/Call Transcripts. The one new visual is the trend
+   mini-chart — deliberately the one thing on this page allowed to scroll
+   sideways (same exception .post-strip already uses), since it's the
+   "chart" the mobile-width rule carves out room for. */
+.trend-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 170px;
+  overflow-x: auto;
+  padding: 4px 4px 8px;
+}
+.trend-col {
+  flex: 0 0 auto;
+  width: 42px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+}
+.trend-bar {
+  width: 100%;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  background: var(--royal-blue);
+  min-height: 3px;
+}
+.trend-period {
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.trend-net {
+  font-size: 10px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+.trend-net.good {
+  color: var(--success);
+}
+.trend-net.bad {
+  color: var(--danger);
+}
+
+/* KPI tile delta line — colored by whether the move was favorable, not by
+   the raw sign of the number (mirrors the hub's own reporting page). */
+.stat-card .delta {
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 6px;
+}
+.stat-card .delta.good {
+  color: var(--success);
+}
+.stat-card .delta.bad {
+  color: var(--danger);
+}
+.stat-card .delta.neutral {
+  color: var(--text-muted);
+}
+
+/* GCD Pal insight row: tone dot + text + a one-tap "Ask" that seeds the
+   bottom chat with that insight's follow-up question. */
+.insight-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.insight-row:last-child {
+  border-bottom: none;
+}
+.insight-row .insight-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text-strong);
+}
+
 /* ------------------------------- mobile -------------------------------------
    Everything above is already fairly reflow-friendly (auto-fit grids,
    min(px,100%) widths) — the exceptions are the fixed-column layouts below,

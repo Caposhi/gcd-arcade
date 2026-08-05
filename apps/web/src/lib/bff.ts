@@ -1,5 +1,6 @@
 /** Thin client for the BFF. The browser never talks to backends directly. */
 import type { AppsResponse, ConsoleState } from "@gcd-arcade/shared";
+import type { ReportingBridgeResponse } from "../views/qbo/types";
 
 const BASE = (import.meta.env.VITE_BFF_URL ?? "").replace(/\/$/, "");
 
@@ -60,6 +61,82 @@ export async function fetchTranscripts<T>(
 export interface AiChatMessage {
   role: "user" | "assistant";
   content: string;
+}
+
+// --------------------------- GCD QBO Hub world -------------------------
+
+/** GET /api/apps/:id/reporting?<filters> — Financial Projections' KPIs,
+ *  charts, aging, and GCD Pal insights for the active filters. Not polled —
+ *  the view fetches on mount and whenever a filter changes (see proxy.ts:
+ *  this can trigger a live QBO Reports fetch on a cold cache). */
+export async function fetchQboReporting(
+  appId: string,
+  filters: Partial<Record<"preset" | "comparison" | "method" | "granularity" | "start" | "end", string>>
+): Promise<ReportingBridgeResponse> {
+  const u = new URL(url(`/api/apps/${encodeURIComponent(appId)}/reporting`), window.location.origin);
+  for (const [k, v] of Object.entries(filters)) {
+    if (v) u.searchParams.set(k, v);
+  }
+  const res = await fetch(u.toString());
+  if (!res.ok) throw new Error(`/reporting ${res.status}`);
+  return (await res.json()) as ReportingBridgeResponse;
+}
+
+// The redesigned QBO Hub pages share ONE ongoing AI Report Assistant
+// conversation across all of them (per the redesign brief), with a history
+// of past threads — bridged through gcd-qbo-hub's /api/external/assistant
+// route (see apps/bff proxy.ts). Unlike Call Transcripts' chat, this is a
+// plain request/response JSON call, not SSE: the hub runs a multi-round
+// Claude tool-use loop that can take a while, so callers should show a busy
+// state rather than expecting incremental chunks.
+
+export interface QboConversationSummary {
+  id: string;
+  title: string;
+  updatedAt: string;
+}
+
+export interface QboConversationMessage {
+  role: "user" | "assistant";
+  content: string;
+  createdAt: string;
+}
+
+/** GET /api/apps/:id/assistant — the shared conversation history list. */
+export async function fetchQboConversations(appId: string): Promise<QboConversationSummary[]> {
+  const res = await fetch(url(`/api/apps/${encodeURIComponent(appId)}/assistant`));
+  if (!res.ok) throw new Error(`/assistant ${res.status}`);
+  const data = (await res.json()) as { conversations: QboConversationSummary[] };
+  return data.conversations;
+}
+
+/** GET /api/apps/:id/assistant?conversationId= — one thread's messages. */
+export async function fetchQboConversation(appId: string, conversationId: string): Promise<QboConversationMessage[]> {
+  const u = new URL(url(`/api/apps/${encodeURIComponent(appId)}/assistant`), window.location.origin);
+  u.searchParams.set("conversationId", conversationId);
+  const res = await fetch(u.toString());
+  if (!res.ok) throw new Error(`/assistant ${res.status}`);
+  const data = (await res.json()) as { messages: QboConversationMessage[] };
+  return data.messages;
+}
+
+/** POST /api/apps/:id/assistant { conversationId?, message } → { conversationId, reply }.
+ *  Omit conversationId to start a new thread. */
+export async function sendQboAssistantMessage(
+  appId: string,
+  conversationId: string | null,
+  message: string
+): Promise<{ conversationId: string; reply: string }> {
+  const res = await fetch(url(`/api/apps/${encodeURIComponent(appId)}/assistant`), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ conversationId: conversationId ?? undefined, message }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.error) {
+    throw new Error(data.error === "not_configured" ? "The assistant isn't configured yet." : data.error || `assistant ${res.status}`);
+  }
+  return data as { conversationId: string; reply: string };
 }
 
 /** POST /api/apps/:id/transcripts/ai-chat, consuming the SSE stream as it

@@ -2,9 +2,22 @@ import { useEffect, useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import type { ConsoleState, Tile } from "@gcd-arcade/shared";
 import { LiveView } from "./LiveView";
+import { ProjectionsView } from "./qbo/ProjectionsView";
 import { AppIcon } from "../lib/icons";
 import { fetchState } from "../lib/bff";
 import { summarizeBadge } from "../lib/badges";
+
+/** Drill-in body for a sub-program: bespoke worlds route here as they're
+ *  redesigned (see QBO_HUB_BESPOKE_VIEW in the BFF's tiles.ts); everything
+ *  else still falls back to the generic themed live view. */
+function ChildBody({ tile }: { tile: Tile }) {
+  switch (tile.view) {
+    case "projections":
+      return <ProjectionsView tile={tile} />;
+    default:
+      return <LiveView tile={tile} />;
+  }
+}
 
 /**
  * Automation Server: a control-room sub-grid of the remaining gcd-webhook
@@ -47,7 +60,7 @@ export function Automation({ tile }: { tile: Tile }) {
           </button>
           <span style={{ fontWeight: 600, color: "var(--text-strong)" }}>{open.name}</span>
         </div>
-        <LiveView tile={open} />
+        <ChildBody tile={open} />
       </div>
     );
   }

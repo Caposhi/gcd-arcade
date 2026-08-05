@@ -146,6 +146,111 @@ export async function proxyTranscriptsGet(
   }
 }
 
+// ---------------------------------------------------------------------------
+// GCD QBO Hub bridges — gcd-qbo-hub has no session with the Arcade, so these
+// use a standalone bearer secret (entry.bearerSecret) instead of the
+// ?secret= convention the transcripts proxies above use, injected
+// server-side, same trust boundary. Both are plain (slow) JSON calls, not
+// SSE — the reporting bridge can trigger a live QBO Reports fetch on a cold
+// cache, and the assistant bridge runs a multi-round Claude tool-use loop —
+// so they share one long timeout rather than FETCH_TIMEOUT_MS.
+// ---------------------------------------------------------------------------
+
+const QBO_HUB_BRIDGE_TIMEOUT_MS = 110_000;
+
+/** GET /api/apps/:id/reporting?<filters> → proxies gcd-qbo-hub's Financial
+ *  Projections reporting bridge (KPIs, charts, aging, GCD Pal insights). A
+ *  plain, allow-listed query passthrough since every param is a known
+ *  filter name. */
+const REPORTING_ALLOWED_PARAMS = new Set(["preset", "comparison", "method", "granularity", "start", "end"]);
+
+export async function proxyQboReporting(entry: AppEntry, query: Record<string, string>, res: Response): Promise<void> {
+  if (!entry.baseUrl || !entry.bearerSecret) {
+    res.status(404).json({ error: "not_available" });
+    return;
+  }
+  const url = new URL("/api/external/reporting", entry.baseUrl);
+  for (const [k, v] of Object.entries(query)) {
+    if (REPORTING_ALLOWED_PARAMS.has(k) && v) url.searchParams.set(k, v);
+  }
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), QBO_HUB_BRIDGE_TIMEOUT_MS);
+  try {
+    const upstream = await fetch(url.toString(), {
+      headers: { accept: "application/json", authorization: `Bearer ${entry.bearerSecret}` },
+      signal: ctrl.signal,
+    });
+    const body = await upstream.text();
+    res.status(upstream.status).type("application/json").send(body);
+  } catch (err) {
+    res.status(502).json({ error: "upstream_unreachable", message: String(err) });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** GET /api/apps/:id/assistant[?conversationId=] → conversation list or one
+ *  conversation's message history, proxied from gcd-qbo-hub's bridge route. */
+export async function proxyQboAssistantGet(entry: AppEntry, conversationId: string | undefined, res: Response): Promise<void> {
+  if (!entry.baseUrl || !entry.bearerSecret) {
+    res.status(404).json({ error: "not_available" });
+    return;
+  }
+  const url = new URL("/api/external/assistant", entry.baseUrl);
+  if (conversationId) url.searchParams.set("conversationId", conversationId);
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const upstream = await fetch(url.toString(), {
+      headers: { accept: "application/json", authorization: `Bearer ${entry.bearerSecret}` },
+      signal: ctrl.signal,
+    });
+    const body = await upstream.text();
+    res.status(upstream.status).type("application/json").send(body);
+  } catch (err) {
+    res.status(502).json({ error: "upstream_unreachable", message: String(err) });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** POST /api/apps/:id/assistant { conversationId?, message } → runs one turn
+ *  of the shared Arcade-side conversation and returns the reply. */
+export async function proxyQboAssistantSend(
+  entry: AppEntry,
+  body: { conversationId?: string; message?: string },
+  res: Response
+): Promise<void> {
+  if (!entry.baseUrl || !entry.bearerSecret) {
+    res.status(404).json({ error: "not_available" });
+    return;
+  }
+  const url = new URL("/api/external/assistant", entry.baseUrl);
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), QBO_HUB_BRIDGE_TIMEOUT_MS);
+  try {
+    const upstream = await fetch(url.toString(), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+        authorization: `Bearer ${entry.bearerSecret}`,
+      },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
+    const text = await upstream.text();
+    res.status(upstream.status).type("application/json").send(text);
+  } catch (err) {
+    res.status(502).json({ error: "upstream_unreachable", message: String(err) });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** POST /api/apps/:id/transcripts/ai-chat → streams gcd-webhook's
  *  Claude-backed chat-over-transcripts SSE response straight through. */
 export async function proxyTranscriptsAiChat(entry: AppEntry, messages: unknown, res: Response): Promise<void> {
