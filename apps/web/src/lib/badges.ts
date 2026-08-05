@@ -12,9 +12,14 @@ function obj(v: unknown): Record<string, unknown> | undefined {
  * Best-effort, contract-agnostic summary. Each app's state shape differs, so we
  * probe a few well-known fields and fall back to "online" rather than guessing.
  */
-export function summarizeBadge(tile: Tile, state: ConsoleState | undefined): string {
+export function summarizeBadge(tile: Tile, state: ConsoleState | undefined, failed = false): string {
   if (!tile.enabled) return "Coming soon";
   if (!tile.online) return "Offline";
+  // "···" means "haven't heard back yet" — genuinely still loading. A fetch
+  // that actually failed (app manifest says online, but /state 502'd) needs
+  // to say so, or it reads as permanently loading rather than the actual
+  // "can't reach it right now" it is.
+  if (failed) return "Unreachable";
   if (!state) return "···";
 
   // gcd-social: autonomy phase / awaiting approval

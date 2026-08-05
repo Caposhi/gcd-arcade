@@ -25,11 +25,19 @@ function iconIdForKind(kind: string | undefined): string {
  */
 export function LiveView({ tile }: { tile: Tile }) {
   const [state, setState] = useState<ConsoleState | undefined>();
+  const [stateFailed, setStateFailed] = useState(false);
   const { events, status } = useStream(tile.appId, tile.program);
 
   useEffect(() => {
     let alive = true;
-    const load = () => fetchState(tile.appId).then((s) => alive && setState(s)).catch(() => {});
+    const load = () =>
+      fetchState(tile.appId)
+        .then((s) => {
+          if (!alive) return;
+          setState(s);
+          setStateFailed(false);
+        })
+        .catch(() => alive && setStateFailed(true));
     load();
     const t = setInterval(load, 15000);
     return () => {
@@ -46,9 +54,9 @@ export function LiveView({ tile }: { tile: Tile }) {
         <h3>Snapshot</h3>
         <div className="kpi-row">
           <span>Status</span>
-          <b>{summarizeBadge(tile, state)}</b>
+          <b>{summarizeBadge(tile, state, stateFailed)}</b>
         </div>
-        <StateSnapshot state={state} program={tile.program} />
+        <StateSnapshot state={state} program={tile.program} failed={stateFailed} />
       </div>
       <div className="panel">
         <h3>Live activity {status === "open" && <span className="statusdot open" />}</h3>
@@ -83,8 +91,8 @@ function EventRow({ ev }: { ev: ConsoleEvent }) {
 }
 
 /** Render scalar fields + program buckets from an app's state, generically. */
-function StateSnapshot({ state, program }: { state: ConsoleState | undefined; program?: string }) {
-  if (!state) return <div className="empty">Loading state…</div>;
+function StateSnapshot({ state, program, failed }: { state: ConsoleState | undefined; program?: string; failed?: boolean }) {
+  if (!state) return <div className="empty">{failed ? "Couldn't load — app may be offline." : "Loading state…"}</div>;
 
   const rows: { k: string; v: string }[] = [];
   const pushScalar = (k: string, v: unknown) => {
