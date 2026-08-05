@@ -17,6 +17,13 @@ export interface AppEntry {
    * to build link-out URLs server-side; never echoed in /api/apps payloads.
    */
   adminSecret?: string;
+  /**
+   * Optional bearer secret for backends gated by `Authorization: Bearer` on
+   * specific bridge routes (gcd-qbo-hub's /api/external/*), as opposed to
+   * `adminSecret`'s `?secret=` convention. Only used server-side; never
+   * echoed in /api/apps payloads.
+   */
+  bearerSecret?: string;
   enabled: boolean;
 }
 
@@ -47,6 +54,7 @@ export const REGISTRY: AppEntry[] = [
     id: "gcd-qbo-hub",
     baseUrl: process.env.GCD_QBO_HUB_URL,
     consoleToken: process.env.GCD_QBO_HUB_CONSOLE_TOKEN,
+    bearerSecret: process.env.GCD_QBO_HUB_BRIDGE_SECRET,
     enabled: envFlag(process.env.GCD_QBO_HUB_ENABLED, true),
   },
 ];

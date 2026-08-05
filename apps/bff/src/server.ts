@@ -15,7 +15,15 @@ import type { AppsResponse, ConsoleManifest } from "@gcd-arcade/shared";
 import { REGISTRY, getReadyEntry } from "./registry.js";
 import { fetchManifest } from "./upstream.js";
 import { buildTiles } from "./tiles.js";
-import { proxyState, proxyStream, proxyTranscriptsGet, proxyTranscriptsAiChat } from "./proxy.js";
+import {
+  proxyState,
+  proxyStream,
+  proxyTranscriptsGet,
+  proxyTranscriptsAiChat,
+  proxyQboAssistantGet,
+  proxyQboAssistantSend,
+  proxyQboReporting,
+} from "./proxy.js";
 
 const PORT = Number(process.env.PORT) || 8787;
 const MANIFEST_TTL_MS = Number(process.env.MANIFEST_TTL_MS) || 60_000;
@@ -136,6 +144,47 @@ app.post("/api/apps/:id/transcripts/ai-chat", async (req, res) => {
     return;
   }
   await proxyTranscriptsAiChat(entry, req.body?.messages, res);
+});
+
+// GCD QBO Hub's redesigned Financial Projections page — KPIs, charts, aging,
+// and GCD Pal insights for the active filters. See proxy.ts for why this
+// isn't polled every 15s like /console/state: it can trigger a live QBO
+// Reports fetch on a cold cache, so the view fetches on mount/filter-change
+// rather than continuously.
+app.get("/api/apps/:id/reporting", async (req, res) => {
+  const entry = getReadyEntry(req.params.id);
+  if (!entry) {
+    res.status(404).json({ error: "unknown_or_offline_app", app: req.params.id });
+    return;
+  }
+  const query: Record<string, string> = {};
+  for (const [k, v] of Object.entries(req.query)) {
+    if (typeof v === "string") query[k] = v;
+  }
+  await proxyQboReporting(entry, query, res);
+});
+
+// GCD QBO Hub's shared AI Report Assistant conversation — one ongoing thread
+// reachable from every redesigned QBO Hub page, with history of past threads.
+// See proxy.ts for why this is a plain JSON bridge (not SSE) with its own
+// bearer secret, distinct from the transcripts admin proxies above.
+app.get("/api/apps/:id/assistant", async (req, res) => {
+  const entry = getReadyEntry(req.params.id);
+  if (!entry) {
+    res.status(404).json({ error: "unknown_or_offline_app", app: req.params.id });
+    return;
+  }
+  const conversationId = typeof req.query.conversationId === "string" ? req.query.conversationId : undefined;
+  await proxyQboAssistantGet(entry, conversationId, res);
+});
+
+app.post("/api/apps/:id/assistant", async (req, res) => {
+  const entry = getReadyEntry(req.params.id);
+  if (!entry) {
+    res.status(404).json({ error: "unknown_or_offline_app", app: req.params.id });
+    return;
+  }
+  await proxyQboAssistantSend(entry, req.body ?? {}, res);
 });
 
 app.listen(PORT, () => {

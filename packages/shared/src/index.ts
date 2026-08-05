@@ -83,6 +83,7 @@ export type ViewKind =
   | "transcripts"
   | "sms-inbox"
   | "automation"
+  | "projections" // GCD QBO Hub: Financial Projections' bespoke world
   | "live" // generic themed live-summary view (foundation default)
   | "placeholder";
 

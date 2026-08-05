@@ -210,9 +210,16 @@ function buildWebhookTiles(entry: AppEntry, fetched: ConsoleManifest | null): Ti
   return tiles;
 }
 
-/** GCD QBO Hub: one grouping tile whose children are the hub's modules. Unlike
- *  gcd-webhook, none of the modules get a bespoke top-level view — the whole
- *  hub is a single tile that drills into per-module live views. */
+/** GCD QBO Hub modules being redesigned into a bespoke world (one at a time,
+ *  per the redesign plan) — everything else here still drills into the
+ *  generic themed live view until its turn comes. */
+const QBO_HUB_BESPOKE_VIEW: Record<string, ViewKind> = {
+  projections: "projections",
+};
+
+/** GCD QBO Hub: one grouping tile whose children are the hub's modules. Each
+ *  child still drills in from the same "Automation Server"-style subgrid;
+ *  only which themed view it opens into differs (see QBO_HUB_BESPOKE_VIEW). */
 function buildQboHubTile(entry: AppEntry, fetched: ConsoleManifest | null): Tile {
   const { m, online } = manifestFor(entry, fetched);
   const theme = m.theme ?? FALLBACK_MANIFEST["gcd-qbo-hub"].theme;
@@ -226,7 +233,7 @@ function buildQboHubTile(entry: AppEntry, fetched: ConsoleManifest | null): Tile
     tagline: PROGRAM_TAGLINES[p.id],
     icon: p.icon ?? "🕹️",
     theme,
-    view: "live",
+    view: QBO_HUB_BESPOKE_VIEW[p.id] ?? "live",
     externalUrl: resolveExternalUrl(entry, p.externalUrl),
     enabled: entry.enabled,
     online,
