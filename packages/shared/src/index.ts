@@ -85,6 +85,7 @@ export type ViewKind =
   | "automation"
   | "projections" // GCD QBO Hub: Financial Projections' bespoke world
   | "cash-sheet-sync" // GCD QBO Hub: Cash Sheet Sync's bespoke world
+  | "assistant" // GCD QBO Hub: AI Report Assistant's bespoke world
   | "live" // generic themed live-summary view (foundation default)
   | "placeholder";
 
