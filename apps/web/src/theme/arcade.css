@@ -147,12 +147,21 @@ body {
 }
 .launcher-grid {
   display: grid;
-  /* auto-fit (not a hardcoded repeat(5, ...)) so this actually reflows to
-     fewer columns on a narrow screen instead of forcing a ~784px-wide grid
-     that a phone would have to scroll sideways to see the rest of. */
+  /* auto-fit (not a hardcoded repeat(5, ...)) so this reflows to fewer
+     columns on a narrow screen instead of forcing a fixed-width grid a
+     phone would have to scroll sideways to see the rest of. auto-fit needs
+     a real width to divide up, though — as a flex item with no width of
+     its own it has nothing to compute against and collapses to one
+     column, so give it one (100%) and cap it (max-width) at ~3 columns'
+     worth: iOS-homescreen-style — a compact centered block on a wide
+     desktop screen rather than 6 icons stretched across it edge to edge —
+     that still naturally drops to 2, then 1, column as available width
+     shrinks toward phone sizes. */
   grid-template-columns: repeat(auto-fit, 128px);
   justify-content: center;
   gap: 44px 36px;
+  width: 100%;
+  max-width: 456px;
 }
 .tile {
   cursor: pointer;
