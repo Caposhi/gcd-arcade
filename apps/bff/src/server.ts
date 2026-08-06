@@ -20,6 +20,7 @@ import {
   proxyStream,
   proxyTranscriptsGet,
   proxyTranscriptsAiChat,
+  proxyWinbackInsights,
   proxyQboAssistantGet,
   proxyQboAssistantSend,
   proxyQboReporting,
@@ -146,6 +147,22 @@ app.post("/api/apps/:id/transcripts/ai-chat", async (req, res) => {
     return;
   }
   await proxyTranscriptsAiChat(entry, req.body?.messages, res);
+});
+
+// Declined-Job Win-Back world (Automation Server, § redesign): snapshot,
+// category breakdown, trend, attention lists, and derived insight bullets.
+// Read-only passthrough to gcd-webhook's win-back insights bridge.
+app.get("/api/apps/:id/winback", async (req, res) => {
+  const entry = getReadyEntry(req.params.id);
+  if (!entry) {
+    res.status(404).json({ error: "unknown_or_offline_app", app: req.params.id });
+    return;
+  }
+  const query: Record<string, string> = {};
+  for (const [k, v] of Object.entries(req.query)) {
+    if (typeof v === "string") query[k] = v;
+  }
+  await proxyWinbackInsights(entry, query, res);
 });
 
 // GCD QBO Hub's redesigned Financial Projections page — KPIs, charts, aging,

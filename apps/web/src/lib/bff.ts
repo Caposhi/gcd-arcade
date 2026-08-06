@@ -1,6 +1,7 @@
 /** Thin client for the BFF. The browser never talks to backends directly. */
 import type { AppsResponse, ConsoleState } from "@gcd-arcade/shared";
 import type { ReportingBridgeResponse, CashSheetSyncBridgeResponse, CoworkerPortalBridgeResponse } from "../views/qbo/types";
+import type { WinbackBridgeResponse } from "../views/winback/types";
 
 const BASE = (import.meta.env.VITE_BFF_URL ?? "").replace(/\/$/, "");
 
@@ -61,6 +62,16 @@ export async function fetchTranscripts<T>(
 export interface AiChatMessage {
   role: "user" | "assistant";
   content: string;
+}
+
+/** GET /api/apps/:id/winback?window= — Declined-Job Win-Back's snapshot,
+ *  category breakdown, trend, attention lists, and derived insight bullets. */
+export async function fetchWinbackInsights(appId: string, windowDays?: number): Promise<WinbackBridgeResponse> {
+  const u = new URL(url(`/api/apps/${encodeURIComponent(appId)}/winback`), window.location.origin);
+  if (windowDays) u.searchParams.set("window", String(windowDays));
+  const res = await fetch(u.toString());
+  if (!res.ok) throw new Error(`/winback ${res.status}`);
+  return (await res.json()) as WinbackBridgeResponse;
 }
 
 // --------------------------- GCD QBO Hub world -------------------------

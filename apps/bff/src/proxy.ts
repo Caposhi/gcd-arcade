@@ -146,6 +146,41 @@ export async function proxyTranscriptsGet(
   }
 }
 
+/** GET /api/apps/:id/winback?window= → proxies gcd-webhook's Declined-Job
+ *  Win-Back insights bridge (snapshot, category breakdown, trend, attention
+ *  lists, derived insight bullets). Same `?secret=` trust boundary as the
+ *  transcripts bridge above — read-only, this repo has no write endpoint for
+ *  win-back data anyway (dispatch is server-side cron/webhook-driven, not
+ *  user-triggered). Unlike gcd-qbo-hub's bridges there's no shared AI-
+ *  assistant infra to lean on here, so the Arcade view built on this has no
+ *  chat panel — a real gap, not an oversight (see server.js's own comment on
+ *  the new route). */
+const WINBACK_ALLOWED_PARAMS = new Set(["window"]);
+
+export async function proxyWinbackInsights(entry: AppEntry, query: Record<string, string>, res: Response): Promise<void> {
+  if (!entry.baseUrl || !entry.adminSecret) {
+    res.status(404).json({ error: "not_available" });
+    return;
+  }
+  const url = new URL("/api/admin/winback/insights", entry.baseUrl);
+  url.searchParams.set("secret", entry.adminSecret);
+  for (const [k, v] of Object.entries(query)) {
+    if (WINBACK_ALLOWED_PARAMS.has(k) && v) url.searchParams.set(k, v);
+  }
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const upstream = await fetch(url.toString(), { headers: { accept: "application/json" }, signal: ctrl.signal });
+    const body = await upstream.text();
+    res.status(upstream.status).type("application/json").send(body);
+  } catch (err) {
+    res.status(502).json({ error: "upstream_unreachable", message: String(err) });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // GCD QBO Hub bridges — gcd-qbo-hub has no session with the Arcade, so these
 // use a standalone bearer secret (entry.bearerSecret) instead of the

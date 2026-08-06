@@ -87,6 +87,7 @@ export type ViewKind =
   | "cash-sheet-sync" // GCD QBO Hub: Cash Sheet Sync's bespoke world
   | "assistant" // GCD QBO Hub: AI Report Assistant's bespoke world
   | "coworker-portal" // GCD QBO Hub: Coworker Portal's bespoke world
+  | "winback" // gcd-webhook Automation Server: Declined-Job Win-Back's bespoke world
   | "live" // generic themed live-summary view (foundation default)
   | "placeholder";
 

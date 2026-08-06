@@ -6,6 +6,7 @@ import { ProjectionsView } from "./qbo/ProjectionsView";
 import { CashSheetSyncView } from "./qbo/CashSheetSyncView";
 import { AssistantView } from "./qbo/AssistantView";
 import { CoworkerPortalView } from "./qbo/CoworkerPortalView";
+import { WinbackView } from "./winback/WinbackView";
 import { AppIcon } from "../lib/icons";
 import { fetchState } from "../lib/bff";
 import { summarizeBadge } from "../lib/badges";
@@ -23,6 +24,8 @@ function ChildBody({ tile }: { tile: Tile }) {
       return <AssistantView tile={tile} />;
     case "coworker-portal":
       return <CoworkerPortalView tile={tile} />;
+    case "winback":
+      return <WinbackView tile={tile} />;
     default:
       return <LiveView tile={tile} />;
   }
