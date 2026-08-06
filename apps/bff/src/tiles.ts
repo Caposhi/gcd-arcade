@@ -75,6 +75,20 @@ const WEBHOOK_TOP_LEVEL: Record<string, ViewKind> = {
   "sms-inbox": "sms-inbox",
 };
 
+/**
+ * gcd-webhook programs redesigned into a bespoke world but staying INSIDE
+ * the "Automation Server" grouping tile's subgrid — unlike
+ * `WEBHOOK_TOP_LEVEL`, this doesn't promote the program to its own
+ * top-level home tile, it just changes which themed view its subgrid card
+ * drills into (mirrors `QBO_HUB_BESPOKE_VIEW` below, one level up). Everyone
+ * else here still drills into the generic themed live view until their
+ * turn comes (see the redesign's Automation Server investigation: most of
+ * these programs don't have enough real, durable data to warrant one yet).
+ */
+const WEBHOOK_SUBVIEW_BESPOKE: Record<string, ViewKind> = {
+  winback: "winback",
+};
+
 /** Short taglines for the gcd-webhook programs (the manifest carries none). */
 const PROGRAM_TAGLINES: Record<string, string> = {
   transcripts: "GoToConnect call-transcript search · nightly sync",
@@ -179,7 +193,7 @@ function buildWebhookTiles(entry: AppEntry, fetched: ConsoleManifest | null): Ti
       tagline: PROGRAM_TAGLINES[p.id],
       icon: p.icon ?? "🕹️",
       theme: m.theme,
-      view: view ?? "live",
+      view: view ?? WEBHOOK_SUBVIEW_BESPOKE[p.id] ?? "live",
       externalUrl,
       enabled: entry.enabled,
       online,
