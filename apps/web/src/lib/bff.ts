@@ -1,6 +1,6 @@
 /** Thin client for the BFF. The browser never talks to backends directly. */
 import type { AppsResponse, ConsoleState } from "@gcd-arcade/shared";
-import type { ReportingBridgeResponse, CashSheetSyncBridgeResponse } from "../views/qbo/types";
+import type { ReportingBridgeResponse, CashSheetSyncBridgeResponse, CoworkerPortalBridgeResponse } from "../views/qbo/types";
 
 const BASE = (import.meta.env.VITE_BFF_URL ?? "").replace(/\/$/, "");
 
@@ -110,6 +110,17 @@ export async function fetchQboCashSheetSync(
   const res = await fetch(u.toString());
   if (!res.ok) throw new Error(`/cash-sheet-sync ${res.status}`);
   return (await res.json()) as CashSheetSyncBridgeResponse;
+}
+
+/** GET /api/apps/:id/coworker-portal?status= — snapshot, assigned-to
+ *  leaderboard, question board, and GCD Pal insights. Read-only — asking,
+ *  answering, closing, and importing all stay on the native page. */
+export async function fetchQboCoworkerPortal(appId: string, status?: string): Promise<CoworkerPortalBridgeResponse> {
+  const u = new URL(url(`/api/apps/${encodeURIComponent(appId)}/coworker-portal`), window.location.origin);
+  if (status) u.searchParams.set("status", status);
+  const res = await fetch(u.toString());
+  if (!res.ok) throw new Error(`/coworker-portal ${res.status}`);
+  return (await res.json()) as CoworkerPortalBridgeResponse;
 }
 
 // The redesigned QBO Hub pages share ONE ongoing AI Report Assistant

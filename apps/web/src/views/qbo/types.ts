@@ -201,3 +201,45 @@ export interface CashSheetSyncBridgeResponse {
 
 export type CssWindowDays = 30 | 90 | 365;
 export type CssGranularity = "week" | "month" | "year";
+
+// ---------------------------------------------------------------------------
+// Coworker Portal ("Ask My Client") — mirrors gcd-qbo-hub's
+// /api/external/coworker-portal bridge response.
+// ---------------------------------------------------------------------------
+
+export interface CwpSnapshot {
+  counts: { open: number; answered: number; closed: number };
+  unassignedOpen: number;
+  oldestOpenDays: number | null;
+  avgResponseHours: number | null;
+  bySource: { manual: number; askMyClient: number };
+}
+
+export interface CwpAssignee {
+  email: string;
+  openCount: number;
+}
+
+export interface CwpQuestion {
+  id: string;
+  subject: string;
+  status: string;
+  askedByEmail: string;
+  assignedEmail: string | null;
+  source: string;
+  qboTxnName: string | null;
+  qboTxnAmount: number | null;
+  qboTxnDate: string | null;
+  createdAt: string;
+  answerCount: number;
+  url: string | null;
+}
+
+export interface CoworkerPortalBridgeResponse {
+  snapshot: CwpSnapshot;
+  assignedLeaderboard: CwpAssignee[];
+  questions: CwpQuestion[];
+  insights: PalInsight[];
+}
+
+export type CwpStatusFilter = "open" | "answered" | "closed" | "all";

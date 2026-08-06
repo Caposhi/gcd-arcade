@@ -58,7 +58,7 @@ const FALLBACK_MANIFEST: Record<string, ConsoleManifest> = {
     name: "GCD QBO Hub",
     tagline: "QuickBooks Online automations, reporting & portals",
     description:
-      "Cash Sheet Sync (live) with Projections, AI Report Assistant & Coworker Portal to come.",
+      "Cash Sheet Sync, Financial Projections, AI Report Assistant & Coworker Portal — all live.",
     theme: { palette: ["#0d1b2a", "#2ec4b6", "#e0fbfc"], style: "ledger control room", icon: "📒" },
     programs: [
       { id: "cash-sheet-sync", name: "Cash Sheet Sync", icon: "💵", externalUrl: "/cash-sheet-sync" },
@@ -91,7 +91,7 @@ const PROGRAM_TAGLINES: Record<string, string> = {
   "cash-sheet-sync": "Daily cash-sheet → QuickBooks Online posting · live",
   projections: "Financial projections & cash-flow forecasting · planned",
   assistant: "AI report assistant over QBO data · planned",
-  "coworker-portal": "Self-service coworker portal · planned",
+  "coworker-portal": "\"Ask My Client\" — transaction questions between owners and coworkers",
 };
 
 export interface FetchedManifest {
@@ -217,6 +217,7 @@ const QBO_HUB_BESPOKE_VIEW: Record<string, ViewKind> = {
   projections: "projections",
   "cash-sheet-sync": "cash-sheet-sync",
   assistant: "assistant",
+  "coworker-portal": "coworker-portal",
 };
 
 /** GCD QBO Hub: one grouping tile whose children are the hub's modules. Each

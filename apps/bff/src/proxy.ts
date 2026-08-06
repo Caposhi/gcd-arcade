@@ -230,6 +230,39 @@ export async function proxyQboCashSheetSync(entry: AppEntry, query: Record<strin
   }
 }
 
+/** GET /api/apps/:id/coworker-portal[?status=] → proxies gcd-qbo-hub's
+ *  Coworker Portal bridge (snapshot, assigned-to leaderboard, question
+ *  board, GCD Pal insights). Read-only — asking/answering/closing a
+ *  question and importing from QuickBooks are all real mutations the
+ *  native page performs; none of them are reachable from here. */
+const COWORKER_PORTAL_ALLOWED_PARAMS = new Set(["status"]);
+
+export async function proxyQboCoworkerPortal(entry: AppEntry, query: Record<string, string>, res: Response): Promise<void> {
+  if (!entry.baseUrl || !entry.bearerSecret) {
+    res.status(404).json({ error: "not_available" });
+    return;
+  }
+  const url = new URL("/api/external/coworker-portal", entry.baseUrl);
+  for (const [k, v] of Object.entries(query)) {
+    if (COWORKER_PORTAL_ALLOWED_PARAMS.has(k) && v) url.searchParams.set(k, v);
+  }
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), QBO_HUB_BRIDGE_TIMEOUT_MS);
+  try {
+    const upstream = await fetch(url.toString(), {
+      headers: { accept: "application/json", authorization: `Bearer ${entry.bearerSecret}` },
+      signal: ctrl.signal,
+    });
+    const body = await upstream.text();
+    res.status(upstream.status).type("application/json").send(body);
+  } catch (err) {
+    res.status(502).json({ error: "upstream_unreachable", message: String(err) });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** GET /api/apps/:id/assistant[?conversationId=] → conversation list or one
  *  conversation's message history, proxied from gcd-qbo-hub's bridge route. */
 export async function proxyQboAssistantGet(entry: AppEntry, conversationId: string | undefined, res: Response): Promise<void> {
