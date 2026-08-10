@@ -1,5 +1,9 @@
 # Attribution — tape milestone wiring
 
+> **External-repository reference only.** This point-in-time wiring plan is not
+> proof that the calls exist or are deployed. Verify the current Attribution
+> source and operational owner before applying it.
+
 The job **lanes** already animate from BullMQ `QueueEvents` (done). These two
 calls make the hub's **tape** print and its moments fire: a green "MATCH
 PRINTED · +$amount" when revenue is attributed, and an "ORDERS AWAY" when a

@@ -1,5 +1,9 @@
 # GCD QBO Hub — `/console/*`
 
+> **External-repository reference only.** The QBO Hub repository is authoritative.
+> This snapshot and its status claims were not verified against that repository
+> during the 2026-08-10 Arcade audit.
+
 Unlike the other backends in this folder, **the `/console/*` endpoints already
 ship inside the `gcd-qbo-hub` repo itself** — there's nothing to paste into that
 app. It's a Next.js (App Router) project, so the contract lives as three route

@@ -1,5 +1,9 @@
 # gcd-webhook — live-event milestone wiring
 
+> **External-repository reference only.** This point-in-time wiring plan is not
+> proof that the calls exist or are deployed. Verify the current `gcd-webhook`
+> source and operational owner before applying it.
+
 These are the `pushConsole(...)` calls that make each program's **live stream**
 light up in the hub (the left-panel counts already work via `/console/state`;
 this is what fills the "LIVE STREAM" / Automation tiles with activity).

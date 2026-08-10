@@ -1,3 +1,9 @@
+# HISTORICAL ONLY — NOT OPERATIONAL
+
+This point-in-time cross-repository handoff contains deployment and integration
+status claims that were not re-verified during the 2026-08-10 audit. Verify each
+current upstream repository and external system before acting on it.
+
 # Cross-repo integration handoff
 
 You (the agent with access to all GCD repos) are finishing the wiring that lets

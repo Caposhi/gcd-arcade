@@ -1,3 +1,9 @@
+# HISTORICAL ONLY — NOT OPERATIONAL
+
+This completed implementation brief is preserved for design history. It contains
+superseded file names, instructions, and open items. Use current source and the
+root documentation set for all work.
+
 # GCD Arcade — Redesign Handoff for Claude Code
 
 Source repo: `Caposhi/gcd-arcade` (branch `main`). This is a **visual + IA redesign only** — no BFF/contract/business-logic changes. Reference mockup for the new look: `GCD Arcade Redesign.dc.html` in this project (open in a browser; 7 screens, switchable via the dashed navy bar at the top — that bar is a review aid only, do not ship it).
